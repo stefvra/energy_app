@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <title> Energy Monitor </title>
+  <!-- Bootstrap core CSS-->
+  <link href={{ url_for("static", filename="vendor/bootstrap/css/bootstrap.min.css") }} rel="stylesheet">
+  <!-- Custom fonts for this template-->
+  <link href={{ url_for("static", filename="vendor/font-awesome/css/font-awesome.min.css") }} rel="stylesheet" type="text/css">
+  <!-- Page level plugin CSS-->
+  <link href={{ url_for("static", filename="vendor/datatables/dataTables.bootstrap4.css") }} rel="stylesheet">
+  <!-- Custom styles for this template-->
+  <link href={{ url_for("static", filename="css/sb-admin.css") }} rel="stylesheet">
+</head>
+
+<body class="" id="page-top">
+  <div class="container-fluid">
+
+
+   {% block content %}{% endblock %}
+
+
+   <!-- Scroll to Top Button-->
+   <a class="scroll-to-top rounded" href="#page-top">
+    <i class="fa fa-angle-up"></i>
+  </a>
+</div>
+<!-- Bootstrap core JavaScript-->
+<script src={{ url_for("static", filename="vendor/jquery/jquery.min.js") }}></script>
+<script src={{ url_for("static", filename="vendor/bootstrap/js/bootstrap.bundle.min.js") }}></script>
+<!-- Core plugin JavaScript-->
+<script src={{ url_for("static", filename="vendor/jquery-easing/jquery.easing.min.js") }}></script>
+<!-- Page level plugin JavaScript-->
+<script src={{ url_for("static", filename="vendor/chart.js/Chart.min.js") }}></script>
+<script src={{ url_for("static", filename="vendor/datatables/jquery.dataTables.js") }}></script>
+<script src={{ url_for("static", filename="vendor/datatables/dataTables.bootstrap4.js") }}></script>
+<!-- Custom scripts for all pages-->
+<script src={{ url_for("static", filename="js/sb-admin.min.js") }}></script>
+<!-- Custom scripts for this page-->
+<script>
+	var today_log_solar_power = {{data.log.solar_power.value}};
+	var today_log_consumption = {{data.log.consumption.value}};
+  var today_log_time = [{% for time_inst in data.log.time %} '{{time_inst}}',  {% endfor %}];
+  var daily_log_gas_used = {{data.gas.log.value}};
+  var daily_log_gas_time = [{% for time_inst in data.gas.log.time %} '{{time_inst}}',  {% endfor %}];
+  var daily_log_elec_consumed = 0;
+  var daily_log_elec_returned = 0;
+  var daily_log_elec_generated = 0;
+  var daily_log_elec_time = 0;
+  var daily_log_cost_prosument = 0;
+  var daily_log_cost_smart = 0;
+  var daily_log_cost_time = 0;
+  var daily_log_elec_time = 0;
+
+
+{#
+  // var daily_log_elec_consumed = {{data.daily.elec.consumed.value}};
+  // var daily_log_elec_returned = {{data.daily.elec.returned.value}};
+  // var daily_log_elec_generated = {{data.daily.elec.generated.value}};
+  // var daily_log_elec_time = [{% for time_inst in data.daily.elec.time %} '{{time_inst}}',  {% endfor %}];
+  // var daily_log_cost_prosument = {{data.daily.cost.prosument.value}};
+  // var daily_log_cost_smart = {{data.daily.cost.smart.value}};
+  // var daily_log_cost_time = {{data.daily.cost.time}};
+  // var daily_log_elec_time = [{% for time_inst in data.daily.elec.time %} '{{time_inst}}',  {% endfor %}];
+  #}
+</script> 
+<script src={{ url_for("static", filename="js/sb-admin-datatables.min.js") }}></script>
+<script src={{ url_for("static", filename="js/sb-admin-charts.js") }}></script>
+</div>
+</body>
+
+</html>

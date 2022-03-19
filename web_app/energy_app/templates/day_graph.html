@@ -1,0 +1,18 @@
+<div class="card mb-3">
+    <div class="card-header" >
+      <i class="fa fa-area-chart" ></i> 
+      {{section.title + " " + section.log.solar_power.last_updated.strftime(date_format) }}
+    </div>
+    <div class="card-body">
+      <canvas id="power_log" width="10" height="3"></canvas>
+    </div>
+    <div class="card-footer small text-muted">Updated {{ section.log.solar_power.last_updated.strftime(label_date_time_format) }}</div>
+  </div>
+
+  <script>
+    var today_log_solar_power = {{ section.log.solar_power.value }};
+    var today_log_consumption = {{ section.log.consumption.value }};
+    var today_log_time = [{% for time_inst in section.log.time %} '{{ time_inst.strftime(graph_time_format) }}',  {% endfor %}];
+  </script> 
+  <script src={{ url_for("static", filename="vendor/chart.js/Chart.min.js") }}></script>
+  <script src={{ url_for("static", filename="js/day_graph.js") }}></script>

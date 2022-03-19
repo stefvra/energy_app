@@ -1,0 +1,19 @@
+<div class="card mb-3">
+    <div class="card-header" >
+      <i class="fa fa-area-chart" ></i> 
+      {{section.title}}
+    </div>
+    <button onclick="window.location.href='{{section.url_routing.url_for_previous_day}}';">
+      Previous Day
+    </button>
+    <button onclick="window.location.href='{{section.url_routing.url_for_today}}';">
+      Today
+    </button>
+    <button onclick="window.location.href='{{section.url_routing.url_for_next_day}}';">
+      Next Day
+    </button>
+</div>
+
+
+
+

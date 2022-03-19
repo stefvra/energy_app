@@ -1,0 +1,3 @@
+[submodule "pysma"]
+	path = pysma
+	url = https://github.com/stefvra/pysma.git

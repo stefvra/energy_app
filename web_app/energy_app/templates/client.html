@@ -1,0 +1,27 @@
+<ol class="breadcrumb">
+    <li class="breadcrumb-item active">{{section.title}}</li>
+  </ol>
+  
+  
+  <div class="row">
+    <form method="POST">
+    {% for key,value in section.config.items() %}
+    <div class="col-xl-3 col-sm-6 mb-3">
+    <p>{{key}}</p>
+    <input name="{{key}}" value= "{{value}}" >
+    </div>
+    {% endfor %}
+    <div class="col-xl-3 col-sm-6 mb-3">
+    <input class="btn btn-secondary btn-block" role="button" type="submit" value="Update setings">
+    </div>
+    </form>
+  </div>
+  
+ 
+  
+  <div class="row">
+    <div class="col-xl-3 col-sm-6 mb-3">
+    <p>states: </p>  
+    <p>{{section.states}}</p>
+    </div>
+  </div>
