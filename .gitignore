@@ -4,7 +4,7 @@ models/
 sandbox/
 .vscode/
 .pytest_cache
-config/general
+config/general/*
 !config/general/test.conf
 config/supervisord
 *.DS_Store
