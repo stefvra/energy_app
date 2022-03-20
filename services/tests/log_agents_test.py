@@ -139,7 +139,6 @@ async def test_faulty_url_logger(logger_fixture, reader_param, store_param, requ
     [
         ['dsmr_logger', {'target_amount': 10}],
         ['pv_logger', {'target_amount': 3}],
-        ['meteo_logger', {'target_amount': 3}],
         ]
 )
 async def test_logger_from_config(logger_fixture, logger_param, request):

@@ -7,6 +7,7 @@ sandbox/
 config/general/*
 !config/general/test.conf
 config/supervisord
+config/.copy_commands
 *.DS_Store
 *.db
 *.csv

@@ -101,9 +101,10 @@ def reader_fixture(httpserver):
                 response_time = 1
                 emulator = Fronius_Emulator(response_time=response_time)
                 httpserver.expect_request("/").respond_with_handler(emulator.request_handler())
-                reader = Fronius_Reader(httpserver.url_for("/"), time_out=response_time-.5)
+                reader = Fronius_Reader(httpserver.url_for("/"), time_out=response_time - .5)
             elif tag == 'ow_reader':
-                reader = self.reader_factory.create_from_config(config_store, 'open_weather_reader')
+                secret_config_store = tools.Config_Store(filename=tools.get_secret_config_file())
+                reader = self.reader_factory.create_from_config(secret_config_store, 'open_weather_reader')
             elif tag == 'faulty_ow_reader':
                 reader = self.reader_factory.create_from_config(config_store, 'faulty_open_weather_reader')
             elif tag == 'faulty_dsmr_reader':

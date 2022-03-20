@@ -128,9 +128,6 @@ def logger_fixture(store_fixture_factory, reader_fixture):
         def create_logger(self):
 
             if self.logger_tag is not None:
-                if self.logger_tag == 'meteo_logger':
-                    agents = logger_factory.create_from_config(config_store, 'meteo_logger')
-                    self.stores_to_delete_on_teardown.append(agents[0].commands[0].store)
                 if self.logger_tag == 'pv_logger':
                     agents = logger_factory.create_from_config(config_store, 'pv_logger')
                     self.stores_to_delete_on_teardown.append(agents[0].commands[0].store)
