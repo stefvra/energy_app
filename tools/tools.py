@@ -7,7 +7,7 @@ import traceback
 
 
 
-__SECRET_CONFIG_FILE = 'config/general/secrets.txt'
+__SECRET_CONFIG_FILE = 'config/general/secrets.conf'
 
 
 

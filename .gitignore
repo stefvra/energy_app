@@ -4,10 +4,7 @@ models/
 sandbox/
 .vscode/
 .pytest_cache
-config/general/*
+config/*
 !config/general/test.conf
-config/supervisord
-config/.copy_commands
+!config/logging
 *.DS_Store
-*.db
-*.csv
