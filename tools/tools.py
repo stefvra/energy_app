@@ -5,9 +5,9 @@ import datetime
 import pytz
 import traceback
 
-def print_callstack():
-    for line in traceback.format_stack():
-        print(line.strip())
+
+
+__SECRET_CONFIG_FILE = 'config/general/secrets.txt'
 
 
 
@@ -35,16 +35,26 @@ def get_log_config_file(app_state=None):
             app_state = 'TESTING'
 
     return 'config/logging/' + log_config_files[app_state]
-    
+
+
+def get_secret_config_file():
+    if os.path.isfile(__SECRET_CONFIG_FILE):
+        return __SECRET_CONFIG_FILE
+    else:
+        raise Exception('No secret config file available...')
+
+
 
 def get_config_file(production_state=False):
     if 'CONFIG_FILE' in os.environ:
         return(os.getenv('CONFIG_FILE'))
     elif production_state:
-        store = Config_Store(filename='config/general/secrets.txt')
+        store = Config_Store(filename=__SECRET_CONFIG_FILE)
         return store.get('config')['dir']
     else:
         return 'config/general/test.conf'
+
+
 
 
 

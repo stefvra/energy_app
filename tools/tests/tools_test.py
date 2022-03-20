@@ -15,7 +15,7 @@ config_filename = 'fixtures/conf.ini'
 operations = ['add', 'remove_option', 'remove_section' 'add_gentle']
 sections = ['section' + str(i) for i in range(10)]
 settings = ['setting' + str(i) for i in range(10)]
-values = ['value' + str(i) for i in range(3)] + [['1', '2', '3'], ['a', 'b', 'c']]
+values = ['value' + str(i) for i in range(3)] + [[1, 2, 3], ['a', 'b', 'c']]
 
 
 
