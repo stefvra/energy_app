@@ -3,6 +3,7 @@ import datetime
 from flask import render_template, url_for, redirect, request
 import pandas as pd
 import logging
+import math
 
 
 from services import inputs
@@ -36,8 +37,6 @@ class Realtime_Data_Model(Model):
 
     def get(self, request):
         logger.debug(f'starting get for realtime data...')
-        pv_log = self.pv_input.get()
-        dsmr_log = self.dsmr_input.get()
 
         result = {}
         result['title'] = self.title
@@ -45,15 +44,28 @@ class Realtime_Data_Model(Model):
         result['from_grid'] = {}
         result['to_consumers'] = {}
 
-        result['from_pv']['value'] = float(pv_log['actual_elec_delivered'])
-        result['from_pv']['last_updated'] = pv_log.index.to_pydatetime()[0]
+        now = datetime.datetime.now()
 
-        result['from_grid']['value'] = float(dsmr_log['actual_elec_used']) * 1000 - float(dsmr_log['actual_elec_returned']) * 1000
-        result['from_grid']['last_updated'] = dsmr_log.index.to_pydatetime()[0]
+        try:
+            pv_log = self.pv_input.get()
+            result['from_pv']['value'] = float(pv_log['actual_elec_delivered'])
+            result['from_pv']['last_updated'] = pv_log.index.to_pydatetime()[0]
+        except:
+            result['from_pv']['value'] = 'N/A'
+            result['from_pv']['last_updated'] = 'N/A'
 
-        result['to_consumers']['value'] = result['from_pv']['value'] + result['from_grid']['value']
-        # what to do when logging is broke??
-        result['to_consumers']['last_updated'] = max(result['from_pv']['last_updated'], result['from_grid']['last_updated'])
+        try:
+            dsmr_log = self.dsmr_input.get()
+            result['from_grid']['value'] = float(dsmr_log['actual_elec_used']) * 1000 - float(dsmr_log['actual_elec_returned']) * 1000
+            result['from_grid']['last_updated'] = dsmr_log.index.to_pydatetime()[0]
+            result['to_consumers']['value'] = result['from_pv']['value'] + result['from_grid']['value']
+            result['to_consumers']['last_updated'] = max(result['from_pv']['last_updated'], result['from_grid']['last_updated'])
+        except:
+            result['to_consumers']['value'] = 'N/A'
+            result['to_consumers']['last_updated'] = 'N/A'
+            result['from_grid']['last_updated'] = 'N/A'
+            result['from_grid']['value'] = 'N/A'
+
 
         return result
 
