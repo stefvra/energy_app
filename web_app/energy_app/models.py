@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 import datetime
+from multiprocessing.sharedctypes import Value
+from turtle import color
 from flask import render_template, url_for, redirect, request
 import pandas as pd
 import logging
 import math
+from pandas.api.types import is_numeric_dtype
 
 
 from services import inputs
@@ -23,6 +26,257 @@ class Model(ABC):
     @abstractmethod
     def post(self, request):
         pass
+
+
+
+class Totals_Data_Model(Model):
+
+    def __init__(self, title):
+        super().__init__(title)
+
+
+    @abstractmethod
+    def get_inputs(self, request):
+        pass
+
+
+    def get(self, request):
+        input_data = self.get_inputs(request)
+        for i in input_data:
+            self.drop_non_numericals(i)
+            self.rename_df(i)
+        result = self.get_data(request, input_data)
+        result = self.complete_result(request, result)
+        return result
+
+    def complete_result(self, request, result):
+        result['title'] = self.title
+        result['title'] = f'Totals for (add correct title)'
+        return result
+
+    @staticmethod
+    def drop_non_numericals(df):
+        if df is not None:
+            for column in df.columns:
+                if not is_numeric_dtype(df[column]):
+                    df.drop(labels=column, axis=1, inplace=True)
+
+    @staticmethod
+    def rename_df(df):
+        df.rename(columns = {
+            'actual_elec_delivered':'from_PV',
+            'actual_elec_used': 'from_grid',
+            'actual_elec_returned': 'to_grid',
+            'total_elec_delivered': 'from_PV_cum'
+            },
+            inplace = True)
+
+
+
+    def get_data(self, request, input_data):
+
+        df_pv = input_data['pv']
+        df_dsmr = input_data['dsmr']
+
+        dsmr_data_available = df_dsmr is not None
+        pv_data_available = df_pv is not None
+
+
+        if pv_data_available:
+            pv_start = df_pv.iloc[0]
+            pv_stop = df_pv.iloc[-1]
+            from_PV_today = (pv_stop['from_PV_cum'] - pv_start['from_PV_cum']) / 1000
+            PV_last_updated = pv_stop.index.to_pydatetime()[-1]
+        else:
+            from_PV_today = 'N/A'
+            PV_last_updated = 'N/A'
+
+        if dsmr_data_available:
+            dsmr_start = df_dsmr.iloc[0]
+            dsmr_stop = df_dsmr.iloc[-1]
+            from_grid_today = dsmr_stop['elec_used_t1'] + dsmr_stop['elec_used_t2'] - dsmr_start['elec_used_t1'] - dsmr_start['elec_used_t2']
+            to_grid_today = dsmr_stop['elec_returned_t1'] + dsmr_stop['elec_returned_t2'] - dsmr_start['elec_returned_t1'] - dsmr_start['elec_returned_t2']
+            today_actual_cost = self.cost_calculator.calculate(from_grid=from_grid_today, to_grid=to_grid_today)
+            dsmr_last_updated = dsmr_stop.index.to_pydatetime()[-1]
+        else:
+            from_grid_today = 'N/A'
+            to_grid_today = 'N/A'
+            today_actual_cost = 'N/A'
+            dsmr_last_updated = 'N/A'
+        
+        if pv_data_available and dsmr_data_available:
+            from_PV_to_consumers_today = from_PV_today - to_grid_today
+            today_cost_without_PV = self.cost_calculator.calculate(
+                from_grid=from_PV_today - to_grid_today + from_grid_today,
+                to_grid=0,
+            )
+            today_profit = today_cost_without_PV - today_actual_cost
+            pv_dsmr_last_updated = max(PV_last_updated, dsmr_last_updated)
+        else:
+            from_PV_to_consumers_today = 'N/A'
+            today_profit = 'N/A'
+            pv_dsmr_last_updated = 'N/A'
+
+
+        data = []
+
+
+        data.append(
+            {
+            'title': 'Electricity Consumed',
+            'color': 'bg-danger',
+            'icon': 'fa-plug',
+            'unit': 'kWh',
+            'value': from_grid_today,
+            'last_updated': dsmr_last_updated
+            }
+        )
+
+        data.append(
+            {
+            'title': 'Electricity Returned',
+            'color': 'bg-primary',
+            'icon': 'fa-plug',
+            'unit': 'kWh',
+            'value': to_grid_today,
+            'last_updated': dsmr_last_updated
+            }
+        )
+
+        data.append(
+            {
+            'title': 'Direct Consumption',
+            'color': 'bg-primary',
+            'icon': 'fa-plug',
+            'unit': 'kWh',
+            'value': from_PV_to_consumers_today,
+            'last_updated': pv_dsmr_last_updated
+            }
+        )
+
+        data.append(
+            {
+            'title': 'Solar Energy',
+            'color': 'bg-success',
+            'icon': 'fa-sun',
+            'unit': 'kWh',
+            'value': from_PV_today,
+            'last_updated': PV_last_updated
+            }
+        )
+
+        data.append(
+            {
+            'title': 'Cost',
+            'color': 'bg-secondary',
+            'icon': 'fa-eur',
+            'unit': '€',
+            'value': today_actual_cost,
+            'last_updated': dsmr_last_updated
+            }
+        )
+
+        data.append(
+            {
+            'title': 'Profit',
+            'color': 'bg-secondary',
+            'icon': 'fa-eur',
+            'unit': '€',
+            'value': today_profit,
+            'last_updated': pv_dsmr_last_updated
+            }
+        )
+
+        results = {'data': data}
+        return results
+
+
+    def post(self, request):
+        pass
+
+
+
+
+class Day_Totals_Data_Model(Totals_Data_Model):
+
+    def __init__(self, dsmr_store, pv_store, title):
+        self.dsmr_input = inputs.Store_Get_Day(dsmr_store)
+        self.pv_input = inputs.Store_Get_Day(pv_store)
+        self.cost_calculator = web_app_tools.Cost_Calculator()
+        super().__init__(title)
+
+
+
+    def get_inputs(self, request):
+        to_date = lambda ds: datetime.datetime.strptime(ds, "%Y-%m-%d").date()
+        requested_date = request.args.get('date', default=datetime.date.today(), type=to_date)
+
+        inputs = {}
+        try:
+            inputs['dsmr'] = self.dsmr_input.get(requested_date)
+        except:
+            inputs['dsmr'] = None
+        
+        try:
+            inputs['pv'] = self.pv_input.get(requested_date)
+        except:
+            inputs['pv'] = None
+
+        return inputs
+
+
+
+
+
+
+class Ref_Totals_Data_Model(Totals_Data_Model):
+
+    def __init__(self, dsmr_store, pv_store, ref_date, title):
+
+        self.ref_date = ref_date
+
+
+        self.last_dsmr_input = inputs.Store_Get_Last(dsmr_store)
+        self.last_pv_input = inputs.Store_Get_Last(pv_store)
+        self.dsmr_input = inputs.Store_Get(dsmr_store)
+        self.pv_input = inputs.Store_Get(pv_store)
+
+        self.cost_calculator = web_app_tools.Cost_Calculator()
+        self.states = {}
+
+        super().__init__(title)
+
+
+
+    def get_inputs(self, request):
+
+        ref_start_time = datetime.datetime.combine(self.ref_date, datetime.time.min)
+        #ref_start_time = local_timezone.localize(ref_start_time)
+        ref_stop_time = ref_start_time + datetime.timedelta(hours=1)
+
+
+        inputs = {}
+        try:
+            last_dsmr_log = self.last_dsmr_input.get()
+            if 'ref_dsmr_log' not in self.states:
+                self.states['ref_dsmr_log'] = self.dsmr_input.get(ref_start_time, ref_stop_time)
+            inputs['dsmr'] = pd.concat([self.states['ref_dsmr_log'], last_dsmr_log])
+        except:
+            inputs['dsmr'] = None
+        
+        try:
+            last_pv_log = self.last_pv_input.get()
+            if 'ref_pv_log' not in self.states:
+                self.states['ref_pv_log'] = self.pv_input.get(ref_start_time, ref_stop_time)
+            inputs['pv'] = pd.concat([self.states['ref_pv_log'], last_pv_log])
+        except:
+            inputs['pv'] = None
+
+        return inputs
+
+
+
+
 
 
 
@@ -66,199 +320,6 @@ class Realtime_Data_Model(Model):
             result['from_grid']['last_updated'] = 'N/A'
             result['from_grid']['value'] = 'N/A'
 
-
-        return result
-
-    def post(self, request):
-        pass
-
-
-
-class Day_Totals_Data_Model(Model):
-
-    def __init__(self, dsmr_store, pv_store, title):
-        self.dsmr_input = inputs.Store_Get_Day(dsmr_store)
-        self.pv_input = inputs.Store_Get_Day(pv_store)
-        self.get_dsmr_input = lambda d: self.dsmr_input.get(d)
-        self.get_pv_input = lambda d: self.pv_input.get(d)
-        self.cost_calculator = web_app_tools.Cost_Calculator()
-        super().__init__(title)
-
-
-
-    def get(self, request):
-        to_date = lambda ds: datetime.datetime.strptime(ds, "%Y-%m-%d").date()
-        requested_date = request.args.get('date', default=datetime.date.today(), type=to_date)
-        pv_log = self.pv_input.get(requested_date)
-        dsmr_log = self.dsmr_input.get(requested_date)
-
-        start_time = min(dsmr_log.index.to_pydatetime())
-        stop_time = max(dsmr_log.index.to_pydatetime())
-
-        log = pd.merge(dsmr_log, pv_log, how='outer', left_index=True, right_index=True)
-
-
-        log = log[(log.index > start_time) & (log.index < stop_time)]
-
-        for column in log.columns:
-            if log[column].dtype != 'float64':
-                log.drop(labels=column, axis=1, inplace=True)
-        
-        log.interpolate(inplace=True)
-        log.fillna(method='bfill', inplace=True)
-
-        log = log.resample('1min').mean()
-
-        log.rename(columns = {
-            'actual_elec_delivered':'from_PV',
-            'actual_elec_used': 'from_grid',
-            'actual_elec_returned': 'to_grid',
-            'total_elec_delivered': 'from_PV_cum'
-            },
-            inplace = True)
-
-        log['from_PV'] = log['from_PV'] / 1000
-        log['from_PV_cum'] = log['from_PV_cum'] / 1000
-
-
-        log['to_consumers'] = log['from_PV'] + log['from_grid'] - log['to_grid']
-        log['from_grid_cum'] = log['elec_used_t1'] + log['elec_used_t2']
-        log['to_grid_cum'] = log['elec_returned_t1'] + log['elec_returned_t2']
-
-
-        log['from_PV_filtered'] = log['from_PV']
-        log['to_consumers_filtered'] = log['to_consumers']
-
-        log.drop(columns=['elec_used_t1', 'elec_used_t2', 'elec_returned_t1', 'elec_returned_t2',
-            'actual_tariff'], inplace=True)
-
-
-        from_grid_today = log['from_grid_cum'].iloc[-1] - log['from_grid_cum'].iloc[0]
-        to_grid_today = log['to_grid_cum'].iloc[-1] - log['to_grid_cum'].iloc[0]
-        from_PV_today = log['from_PV_cum'].iloc[-1] - log['from_PV_cum'].iloc[0]
-        from_PV_to_consumers_today = from_PV_today - to_grid_today
-
-
-        today_actual_cost = self.cost_calculator.calculate(
-            from_grid=from_grid_today,
-            to_grid=to_grid_today,
-            )
-
-        today_cost_without_PV = self.cost_calculator.calculate(
-            from_grid=from_PV_today - to_grid_today + from_grid_today,
-            to_grid=0,
-        )
-
-
-        result = {}
-        result['title'] = self.title
-
-        result['title'] = f'Totals for {requested_date}'
-        result['totals'] = {
-            'consumed_from_grid': {'value': from_grid_today, 'last_updated': log.index[-1]},
-            'returned_to_grid': {'value': to_grid_today, 'last_updated': log.index[-1]},
-            'consumed_from_PV': {'value': from_PV_to_consumers_today, 'last_updated': log.index[-1]},
-            'generated_from_PV': {'value': from_PV_today, 'last_updated': log.index[-1]},
-            'cost': {'value': today_actual_cost, 'last_updated': log.index[-1]},        
-            'profit': {'value': today_cost_without_PV - today_actual_cost, 'last_updated': log.index[-1]}
-            }
-
-        return result
-
-    def post(self, request):
-        pass
-
-
-
-
-class Totals_Data_Model(Model):
-
-    def __init__(self, dsmr_store, pv_store, ref_date, title):
-
-        self.ref_date = ref_date
-
-
-        self.last_dsmr_input = inputs.Store_Get_Last(dsmr_store)
-        self.last_pv_input = inputs.Store_Get_Last(pv_store)
-        self.dsmr_input = inputs.Store_Get(dsmr_store)
-        self.pv_input = inputs.Store_Get(pv_store)
-
-        self.cost_calculator = web_app_tools.Cost_Calculator()
-        self.states = {}
-
-        super().__init__(title)
-
-
-
-    def get(self, request):
-
-
-        ref_start_time = datetime.datetime.combine(self.ref_date, datetime.time.min)
-        #ref_start_time = local_timezone.localize(ref_start_time)
-        ref_stop_time = ref_start_time + datetime.timedelta(hours=1)
-
-
-        last_pv_log = self.last_pv_input.get()
-        last_dsmr_log = self.last_dsmr_input.get()
-
-        if 'ref_pv_log' not in self.states:
-            self.states['ref_pv_log'] = self.pv_input.get(ref_start_time, ref_stop_time)
-        if 'ref_dsmr_log' not in self.states:
-            self.states['ref_dsmr_log'] = self.dsmr_input.get(ref_start_time, ref_stop_time)
-
-        ref_pv_log = self.states['ref_pv_log'].copy()
-        ref_dsmr_log = self.states['ref_dsmr_log'].copy()
-
-
-        column_register = {
-            'actual_elec_delivered':'from_PV',
-            'elec_used_t1': 'from_grid1',
-            'elec_used_t2': 'from_grid2',
-            'elec_returned_t1': 'to_grid1',
-            'elec_returned_t2': 'to_grid2',
-            'total_elec_delivered': 'from_PV_cum'
-            }
-        last_pv_log.rename(columns=column_register, inplace=True)
-        last_dsmr_log.rename(columns=column_register, inplace=True)
-        ref_pv_log.rename(columns=column_register, inplace=True)
-        ref_dsmr_log.rename(columns=column_register, inplace=True)
-
-        last_dsmr_log['to_grid'] = last_dsmr_log['to_grid1'] + last_dsmr_log['to_grid2']
-        ref_dsmr_log['to_grid'] = ref_dsmr_log['to_grid1'] + ref_dsmr_log['to_grid2']
-        last_dsmr_log['from_grid'] = last_dsmr_log['from_grid1'] + last_dsmr_log['from_grid2']
-        ref_dsmr_log['from_grid'] = ref_dsmr_log['from_grid1'] + ref_dsmr_log['from_grid2']
-
-
-        from_grid = (last_dsmr_log['from_grid'].iloc[0] - ref_dsmr_log['from_grid'].iloc[0])
-        to_grid = (last_dsmr_log['to_grid'].iloc[0] - ref_dsmr_log['to_grid'].iloc[0])
-        from_PV = (last_pv_log['from_PV_cum'].iloc[0] - ref_pv_log['from_PV_cum'].iloc[0]) / 1000
-        from_PV_to_consumers = from_PV - to_grid
-
-
-        actual_cost = self.cost_calculator.calculate(
-            from_grid=from_grid,
-            to_grid=to_grid,
-            )
-
-        cost_without_PV = self.cost_calculator.calculate(
-            from_grid=from_PV - to_grid + from_grid,
-            to_grid=0,
-        )
-
-        last_updated = last_dsmr_log.index[-1]
-
-        result = {}
-        result['title'] = self.title
-
-        result['title'] = f'Totals since {self.ref_date}'
-        result['totals'] = {
-            'consumed_from_grid': {'value': from_grid, 'last_updated': last_updated},
-            'returned_to_grid': {'value': to_grid, 'last_updated': last_updated},
-            'consumed_from_PV': {'value': from_PV_to_consumers, 'last_updated': last_updated},
-            'generated_from_PV': {'value': from_PV, 'last_updated': last_updated},
-            'cost': {'value': actual_cost, 'last_updated': last_updated},        
-            'profit': {'value': cost_without_PV - actual_cost, 'last_updated': last_updated}
-            }
 
         return result
 
