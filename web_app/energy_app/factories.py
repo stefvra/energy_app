@@ -2,6 +2,7 @@ from tools.factory_tools import Param_Parser
 import web_app.energy_app.controllers as controllers
 import web_app.energy_app.models as models
 from endpoints import agent_clients, stores
+from services import inputs
 from tools import tools
 
 
@@ -21,7 +22,8 @@ class Dashboard_Controller_Factory():
 
         self.model_register = {
             'realtime': ['realtime_labels.html', Realtime_Model_Factory],
-            'day_graph': ['day_graph.html', Day_Graph_Model_Factory],
+            'pv_consumption_day_graph': ['day_graph.html', Day_Graph_Model_Factory],
+            'consumption_day_graph': ['day_graph.html', Day_Graph_Model_Factory],
             'day_totals': ['cumulative_labels.html', Day_Totals_Model_Factory],
             'date_buttons': ['date_buttons.html', Date_Buttons_Model_Factory],
             'totals': ['cumulative_labels.html', Totals_Model_Factory],
@@ -110,11 +112,17 @@ class Day_Graph_Model_Factory():
             'pv_store': {'type': 'string'},
             'dsmr_store': {'type': 'string'}, 
             'activate': {'type': 'bool', 'default': True},
-            'title': {'type': 'string', 'default': 'Day Graph'}            
+            'title': {'type': 'string', 'default': 'Day Graph'},
+            'type': {'type': 'string', 'default': 'pvpower_cons'},
+            'fields': {'type': 'list', 'default': ''}            
         }
 
-    def create(self, dsmr_store, pv_store, title):
-        return models.Day_Data_Model(dsmr_store, pv_store, title)
+    def create(self, dsmr_store, pv_store, title, processor):
+        inputs = [
+            inputs.Store_Get_Day(pv_store),
+            inputs.Store_Get_Day(dsmr_store),
+        ]
+        return models.Day_Data_Model(dsmr_store, pv_store, title, processor)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -132,7 +140,11 @@ class Day_Graph_Model_Factory():
         if store_register is not None:
             dsmr_store = store_register.register(dsmr_store)
             pv_store = store_register.register(pv_store)
-        return self.create(dsmr_store, pv_store, params['title'])
+        if params['type'] == 'pvpower_cons':
+            processor = models.PV_Consumption_Processor()
+        else:
+            processor = models.Field_Picker(params['fields'])
+        return self.create(dsmr_store, pv_store, params['title'], processor)
 
 
 
