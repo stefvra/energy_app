@@ -118,7 +118,7 @@ class Block:
         return False
 
     def __str__(self):
-        return f'start: {self.start}, end: {self.end}, state: {self.state}'
+        return f'Block object, start: {self.start}, end: {self.end}, state: {self.state}'
 
 
     async def process(self, inputs, commands, algorithm):
@@ -126,6 +126,7 @@ class Block:
 
     def change_state(self, state):
         self.state = state
+        logger.debug(f'changed state of block {self} to {state}')
 
 
     def is_freshly_processed(self):
@@ -188,6 +189,7 @@ class Block_Processing_Strategy(basic.Strategy):
             try:
                 starting_edge = edge_generator.__next__()
             except StopIteration:
+                logger.debug(f'blocklist updated to {self.states["blocks"]}')
                 return True
             block = Block(start=starting_edge, end=stopping_edge)
             if block not in self.states['blocks']:
@@ -216,9 +218,11 @@ class Block_Processing_Strategy(basic.Strategy):
             logger.debug(f'{blocks_processed} blocks processed...')
             try:
                 await block.process(inputs, commands, self.algorithm)
+                logger.debug(f'Block {block} successfully processed...')
                 if block.is_freshly_processed():
                     blocks_processed += 1
-            except:
+            except Exception as e:
+                logger.debug(f'Block {block} failed to process with exception {e}')
                 pass
             if blocks_processed == self.config['blocks_to_process']:
                 return
