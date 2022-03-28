@@ -1,6 +1,7 @@
 __pycache__/
 fixtures/
 models/
+!web_app/energy_app/models/
 sandbox/
 .vscode/
 .pytest_cache
