@@ -14,6 +14,10 @@ class Dashboard_Controller():
     def control_get(self, request):
         data = []
         for model, template in zip(self.models, self.templates):
+            
+            #model_data = model.get(request)
+            #model_data['template'] = template
+            
             try:
                 model_data = model.get(request)
                 model_data['template'] = template

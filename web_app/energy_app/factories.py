@@ -81,7 +81,7 @@ class Realtime_Model_Factory():
         }
 
     def create(self, dsmr_store, pv_store, title):
-        return models.Realtime_Data_Model(dsmr_store, pv_store, title)
+        return models.basic.Realtime_Data_Model(dsmr_store, pv_store, title)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -113,16 +113,16 @@ class Day_Graph_Model_Factory():
             'dsmr_store': {'type': 'string'}, 
             'activate': {'type': 'bool', 'default': True},
             'title': {'type': 'string', 'default': 'Day Graph'},
-            'type': {'type': 'string', 'default': 'pvpower_cons'},
-            'fields': {'type': 'list', 'default': ''}            
+            'processor': {'type': 'string', 'default': 'pvpower_cons'},
+            'fields': {'type': 'string_list', 'default': ['', '']}            
         }
 
     def create(self, dsmr_store, pv_store, title, processor):
-        inputs = [
+        _inputs = [
             inputs.Store_Get_Day(pv_store),
             inputs.Store_Get_Day(dsmr_store),
         ]
-        return models.Day_Data_Model(dsmr_store, pv_store, title, processor)
+        return models.basic.Day_Data_Model(_inputs, title, processor)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -140,10 +140,10 @@ class Day_Graph_Model_Factory():
         if store_register is not None:
             dsmr_store = store_register.register(dsmr_store)
             pv_store = store_register.register(pv_store)
-        if params['type'] == 'pvpower_cons':
-            processor = models.PV_Consumption_Processor()
+        if params['processor'] == 'pvpower_cons':
+            processor = models.logs.PV_Consumption_Processor()
         else:
-            processor = models.Field_Picker(params['fields'])
+            processor = models.logs.Field_Picker(params['fields'])
         return self.create(dsmr_store, pv_store, params['title'], processor)
 
 
@@ -161,7 +161,7 @@ class Totals_Graph_Model_Factory():
         }
 
     def create(self, dsmr_store, pv_store, title):
-        return models.Summarized_Data_Model(dsmr_store, pv_store, title)
+        return models.basic.Summarized_Data_Model(dsmr_store, pv_store, title)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -200,7 +200,7 @@ class Day_Totals_Model_Factory():
         }
 
     def create(self, dsmr_store, pv_store, title):
-        return models.Day_Totals_Data_Model(dsmr_store, pv_store, title)
+        return models.totals.Day_Totals_Data_Model(dsmr_store, pv_store, title)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -234,7 +234,7 @@ class Totals_Model_Factory():
         }
 
     def create(self, dsmr_store, pv_store, ref_date, title):
-        return models.Totals_Data_Model(dsmr_store, pv_store, ref_date, title)
+        return models.totals.Totals_Data_Model(dsmr_store, pv_store, ref_date, title)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -266,7 +266,7 @@ class Date_Buttons_Model_Factory():
         }
 
     def create(self, title):
-        return models.Date_Buttons_Data_Model(title)
+        return models.basic.Date_Buttons_Data_Model(title)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -297,7 +297,7 @@ class Client_Model_Factory():
 
     def create(self, host, port, title):
         client = agent_clients.Agent_Client(host=host, port=port)
-        return models.Agent_Data_Model(client, title)
+        return models.basic.Agent_Data_Model(client, title)
     
 
     def create_from_config(self, config_store, section, store_register=None):
