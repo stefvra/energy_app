@@ -1,9 +1,7 @@
 import configparser
 import os
 from dateutil import parser
-import datetime
 import pytz
-import traceback
 
 
 
@@ -89,6 +87,7 @@ class Config_Store():
             if ',' in value:
                 return [self._parse_value(v) for v in value.split(',')]
             try:
+                value = value.strip()
                 value = float(value)
                 value = int(value) if value.is_integer() else value
                 return value
