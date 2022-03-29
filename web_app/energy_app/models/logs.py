@@ -37,8 +37,9 @@ class Processor(ABC):
 
 class Field_Picker(Processor):
 
-    def __init__(self, series):
+    def __init__(self, series, unit):
         self.series = series
+        self.unit = unit
 
     def process(self, dfs):
 
@@ -56,6 +57,7 @@ class Field_Picker(Processor):
         result['last_updated'] = max(df.index)
         result['series'] = []
         result['id'] = uuid.uuid1()
+        result['unit'] = self.unit
 
         for serie in self.series:
             result['series'].append(
@@ -117,6 +119,7 @@ class PV_Consumption_Processor(Processor):
         result['x_labels'] = list(df.index)
         result['last_updated'] = max(df.index)
         result['series'] = []
+        result['unit'] = 'kWh'
         result['id'] = uuid.uuid1()
 
         result['series'].append(

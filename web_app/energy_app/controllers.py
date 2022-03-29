@@ -31,6 +31,7 @@ class Dashboard_Controller():
 
     def control_post(self, request):
 
+
         for model in self.models:
             model.post(request)
         return redirect(url_for('main'))

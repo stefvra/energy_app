@@ -22,8 +22,7 @@ class Dashboard_Controller_Factory():
 
         self.model_register = {
             'realtime': ['realtime_labels.html', Realtime_Model_Factory],
-            'pv_consumption_day_graph': ['day_graph.html', Day_Graph_Model_Factory],
-            'consumption_day_graph': ['day_graph.html', Day_Graph_Model_Factory],
+            'day_graph': ['day_graph.html', Day_Graph_Model_Factory],
             'day_totals': ['cumulative_labels.html', Day_Totals_Model_Factory],
             'date_buttons': ['date_buttons.html', Date_Buttons_Model_Factory],
             'totals': ['cumulative_labels.html', Totals_Model_Factory],
@@ -114,7 +113,8 @@ class Day_Graph_Model_Factory():
             'activate': {'type': 'bool', 'default': True},
             'title': {'type': 'string', 'default': 'Day Graph'},
             'processor': {'type': 'string', 'default': 'pvpower_cons'},
-            'fields': {'type': 'string_list', 'default': ['', '']}            
+            'fields': {'type': 'string_list', 'default': ''},
+            'unit': {'type': 'string', 'default': ''}            
         }
 
     def create(self, dsmr_store, pv_store, title, processor):
@@ -143,7 +143,7 @@ class Day_Graph_Model_Factory():
         if params['processor'] == 'pvpower_cons':
             processor = models.logs.PV_Consumption_Processor()
         else:
-            processor = models.logs.Field_Picker(params['fields'])
+            processor = models.logs.Field_Picker(params['fields'], params['unit'])
         return self.create(dsmr_store, pv_store, params['title'], processor)
 
 
