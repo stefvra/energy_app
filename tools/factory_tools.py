@@ -23,6 +23,11 @@ class Param_Parser():
             'datetime': self.is_datetime
         }
 
+        self.list_types = [
+            'int_list',
+            'string_list'
+        ]
+
     def raise_error_or_return_boolean(self, value, name='unknown'):
         if not value:
             if self.raise_error:
@@ -47,6 +52,16 @@ class Param_Parser():
             if key not in updated_var:
                 if 'default' in info:
                     updated_var[key] = info['default']
+        updated_var = self.listify(updated_var, param_register)           
+        return updated_var
+
+
+    def listify(self, var, param_register):
+        updated_var = var.copy()
+        for key, value in updated_var.items():
+            if key in param_register:
+                if param_register[key]['type'] in self.list_types and not isinstance(value, list):
+                    updated_var[key] = [value]
         return updated_var
 
 
