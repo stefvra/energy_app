@@ -70,8 +70,8 @@ class Totals_Data_Model(Model):
 
 
         if pv_data_available:
-            pv_start = df_pv.iloc[0]
-            pv_stop = df_pv.iloc[-1]
+            pv_start = df_pv.sort_index().iloc[0]
+            pv_stop = df_pv.sort_index().iloc[-1]
             from_PV_today = (pv_stop['from_PV_cum'] - pv_start['from_PV_cum']) / 1000
             PV_last_updated = df_pv.index.to_pydatetime()[-1]
         else:
@@ -79,8 +79,8 @@ class Totals_Data_Model(Model):
             PV_last_updated = 'N/A'
 
         if dsmr_data_available:
-            dsmr_start = df_dsmr.iloc[0]
-            dsmr_stop = df_dsmr.iloc[-1]
+            dsmr_start = df_dsmr.sort_index().iloc[0]
+            dsmr_stop = df_dsmr.sort_index().iloc[-1]
             from_grid_today = dsmr_stop['elec_used_t1'] + dsmr_stop['elec_used_t2'] - dsmr_start['elec_used_t1'] - dsmr_start['elec_used_t2']
             to_grid_today = dsmr_stop['elec_returned_t1'] + dsmr_stop['elec_returned_t2'] - dsmr_start['elec_returned_t1'] - dsmr_start['elec_returned_t2']
             today_actual_cost = self.cost_calculator.calculate(from_grid=from_grid_today, to_grid=to_grid_today)
@@ -107,7 +107,7 @@ class Totals_Data_Model(Model):
 
         data = []
 
-
+        
         data.append(
             {
             'title': 'Electricity Consumed',
