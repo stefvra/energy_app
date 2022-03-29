@@ -122,7 +122,7 @@ class Day_Graph_Model_Factory():
             inputs.Store_Get_Day(pv_store),
             inputs.Store_Get_Day(dsmr_store),
         ]
-        return models.basic.Day_Data_Model(_inputs, title, processor)
+        return models.logs.Day_Data_Model(_inputs, title, processor)
     
 
     def create_from_config(self, config_store, section, store_register=None):
