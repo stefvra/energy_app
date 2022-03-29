@@ -4,7 +4,7 @@
       {{section.title + " " + section.last_updated.strftime(date_format) }}
     </div>
     <div class="card-body">
-      <canvas id="power_log" width="10" height="3"></canvas>
+      <canvas id="{{section.id}}" width="10" height="3"></canvas>
     </div>
     <div class="card-footer small text-muted">Updated {{ section.last_updated.strftime(label_date_time_format) }}</div>
   </div>
@@ -14,7 +14,8 @@
   </script> 
   <script src={{ url_for("static", filename="vendor/chart.js/Chart.min.js") }}></script>
   <script>
-    var ctx = document.getElementById("power_log");
+    var colors = ['#008080', '#808000', '#800080', '#000080', '#808080']
+    var ctx = document.getElementById("{{section.id}}");
     var power_chart = new Chart(ctx, {
       type: 'line',
       data: {
@@ -22,14 +23,14 @@
         datasets: [
         {% for serie in section.series %}
           {
-          label: {{serie.label}},
+          label: '{{serie.label}}',
           lineTension: 0.3,
-          borderColor: '#28a745',
+          borderColor: colors[{{loop.index0}}],
           borderWidth: 2,
           pointRadius: 0,
-          pointBackgroundColor: '#28a745',
+          pointBackgroundColor: colors[{{loop.index0}}],
           pointBorderColor: "rgba(255,255,255,0.8)",
-          pointHoverBackgroundColor: '#28a745',
+          pointHoverBackgroundColor: colors[{{loop.index0}}],
           pointHitRadius: 20,
           pointBorderWidth: 1,
           data: {{serie.data}},

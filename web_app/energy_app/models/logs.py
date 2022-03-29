@@ -9,6 +9,7 @@ import logging
 import math
 from pandas.api.types import is_numeric_dtype
 from functools import reduce
+import uuid
 
 
 from services import inputs
@@ -59,13 +60,13 @@ class Field_Picker(Processor):
         result['x_labels'] = list(df.index)
         result['last_updated'] = max(df.index)
         result['series'] = []
+        result['id'] = uuid.uuid1()
 
         for serie in self.series:
             result['series'].append(
                 {
                     'label': serie,
-                    'data': df[serie],
-                    'color': '',
+                    'data': list(df[serie].values),
                 }
             )
         
@@ -74,11 +75,9 @@ class Field_Picker(Processor):
 
 class PV_Consumption_Processor(Processor):
 
-    def __init__(self, PV_label='Solar Power', PV_color='', cons_label='Consumption', cons_color=''):
+    def __init__(self, PV_label='Solar Power', cons_label='Consumption'):
         self.PV_label = PV_label
-        self.PV_color = PV_color
         self.cons_label = cons_label
-        self.cons_color = cons_color        
 
     def process(self, dfs):
 
@@ -123,20 +122,19 @@ class PV_Consumption_Processor(Processor):
         result['x_labels'] = list(df.index)
         result['last_updated'] = max(df.index)
         result['series'] = []
+        result['id'] = uuid.uuid1()
 
         result['series'].append(
             {
                 'label': self.PV_label,
-                'data': df['from_PV'],
-                'color': self.PV_color,
+                'data': list(df['from_PV'].values),
             }
         )
         
         result['series'].append(
             {
                 'label': self.cons_label,
-                'data': df['to_consumers'],
-                'color': self.cons_color,
+                'data': list(df['to_consumers'].values),
             }
         )
 
