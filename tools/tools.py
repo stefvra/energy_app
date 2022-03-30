@@ -27,12 +27,14 @@ def get_local_timezone():
 
 def get_log_config_file(app_state=None):
     if app_state is None:
-        if 'ENERGYAPP_STATE' in os.environ:
-            app_state = os.getenv('ENERGYAPP_STATE')
-        else:
-            app_state = 'TESTING'
-
+        app_state = get_app_state()
     return 'config/logging/' + log_config_files[app_state]
+
+def get_app_state():
+    if 'ENERGYAPP_STATE' in os.environ:
+        return os.getenv('ENERGYAPP_STATE')
+    else:
+        return 'PRODUCTION'
 
 
 def get_secret_config_file():

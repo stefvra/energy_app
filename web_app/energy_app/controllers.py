@@ -1,5 +1,6 @@
 
 from flask import render_template, url_for, redirect, request
+from tools import tools
 
 
 class Dashboard_Controller():
@@ -15,17 +16,18 @@ class Dashboard_Controller():
         data = []
         for model, template in zip(self.models, self.templates):
             
-            #model_data = model.get(request)
-            #model_data['template'] = template
-            
-            try:
+            if tools.get_app_state() == 'TESTING':
                 model_data = model.get(request)
                 model_data['template'] = template
-            except:
-                model_data = dict()
-                model_data['template'] = self.error_template
-                model_data['message'] = f'Unable to get data for {model.title}...'
-            data.append(model_data)
+            else:
+                try:
+                    model_data = model.get(request)
+                    model_data['template'] = template
+                except:
+                    model_data = dict()
+                    model_data['template'] = self.error_template
+                    model_data['message'] = f'Unable to get data for {model.title}...'
+                data.append(model_data)
         return render_template(self.main_template, data=data)
 
 
