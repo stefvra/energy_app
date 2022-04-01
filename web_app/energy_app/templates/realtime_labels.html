@@ -9,7 +9,7 @@
           <div class="card-body-icon">
             <i class="fa fa-fw fa-sun-o"></i>
           </div>
-          <div class="mr-5"> Solar power:
+          <div class="mr-5"> From PV: 
             {% if section.from_pv.value is number %}
             {{section.from_pv.value|round|int}}W
             {% else %}
@@ -34,7 +34,7 @@
           <div class="card-body-icon">
             <i class="fa fa-fw fa-plug"></i>
           </div>
-          <div class="mr-5"> Electricity Consumption: 
+          <div class="mr-5"> To Consumers: 
             {% if section.to_consumers.value is number %}
             {{section.to_consumers.value|round|int}}W
             {% else %}
@@ -48,6 +48,31 @@
             {{section.to_consumers.last_updated}}
             {% else %}
             {{section.to_consumers.last_updated.strftime(label_date_time_format)}}
+            {% endif %}            
+          </span>
+        </a>
+      </div>
+    </div>
+    <div class="col-xl-3 col-sm-6 mb-3">
+      <div class="card text-white bg-primary o-hidden h-100">
+        <div class="card-body">
+          <div class="card-body-icon">
+            <i class="fa fa-fw fa-plug"></i>
+          </div>
+          <div class="mr-5"> From Grid: 
+            {% if section.from_grid.value is number %}
+            {{section.from_grid.value|round|int}}W
+            {% else %}
+            {{section.from_grid.value}}
+            {% endif %}
+          </div>
+        </div>
+        <a class="card-footer text-white clearfix small z-1">
+          <span class="float-left">Last Updated: 
+            {% if section.from_grid.last_updated is string %}
+            {{section.from_grid.last_updated}}
+            {% else %}
+            {{section.from_grid.last_updated.strftime(label_date_time_format)}}
             {% endif %}            
           </span>
         </a>

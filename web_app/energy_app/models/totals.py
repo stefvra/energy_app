@@ -110,7 +110,7 @@ class Totals_Data_Model(Model):
         
         data.append(
             {
-            'title': 'Electricity Consumed',
+            'title': 'From Grid',
             'color': 'bg-danger',
             'icon': 'fa-plug',
             'unit': 'kWh',
@@ -121,7 +121,7 @@ class Totals_Data_Model(Model):
 
         data.append(
             {
-            'title': 'Electricity Returned',
+            'title': 'To Grid',
             'color': 'bg-primary',
             'icon': 'fa-plug',
             'unit': 'kWh',
@@ -132,7 +132,7 @@ class Totals_Data_Model(Model):
 
         data.append(
             {
-            'title': 'Direct Consumption',
+            'title': 'Direct Consumption from PV',
             'color': 'bg-primary',
             'icon': 'fa-plug',
             'unit': 'kWh',
@@ -143,7 +143,7 @@ class Totals_Data_Model(Model):
 
         data.append(
             {
-            'title': 'Solar Energy',
+            'title': 'From PV',
             'color': 'bg-success',
             'icon': 'fa-sun',
             'unit': 'kWh',
