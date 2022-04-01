@@ -63,13 +63,17 @@ class Realtime_Data_Model(Model):
             dsmr_log = self.dsmr_input.get()
             result['from_grid']['value'] = float(dsmr_log['actual_elec_used']) * 1000 - float(dsmr_log['actual_elec_returned']) * 1000
             result['from_grid']['last_updated'] = dsmr_log.index.to_pydatetime()[0]
+        except:
+            result['from_grid']['last_updated'] = 'N/A'
+            result['from_grid']['value'] = 'N/A'
+
+        try:
             result['to_consumers']['value'] = result['from_pv']['value'] + result['from_grid']['value']
             result['to_consumers']['last_updated'] = max(result['from_pv']['last_updated'], result['from_grid']['last_updated'])
         except:
             result['to_consumers']['value'] = 'N/A'
             result['to_consumers']['last_updated'] = 'N/A'
-            result['from_grid']['last_updated'] = 'N/A'
-            result['from_grid']['value'] = 'N/A'
+
 
 
         return result
