@@ -76,7 +76,7 @@ class Field_Picker(Processor):
 
 class PV_Consumption_Processor(Processor):
 
-    def __init__(self, PV_label='Solar Power', cons_label='Consumption'):
+    def __init__(self, PV_label='From PV', cons_label='To Consumers'):
         self.PV_label = PV_label
         self.cons_label = cons_label
 
