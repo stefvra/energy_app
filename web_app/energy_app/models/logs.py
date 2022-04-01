@@ -48,9 +48,12 @@ class Field_Picker(Processor):
         #log = log[(log.index > start_time) & (log.index < stop_time)]
 
         df = reduce(lambda left,right: pd.merge(left, right, how='outer', left_index=True, right_index=True), dfs)
-        df.interpolate(inplace=True)
-        df.fillna(method='bfill', inplace=True)
-        df.dropna(inplace=True)
+        try:
+            df.interpolate(inplace=True)
+            df.fillna(method='bfill', inplace=True)
+            df.dropna(inplace=True)
+        except:
+            df = df.interpolate(method='bfill').interpolate(method='ffill')
 
         result = {}
         result['x_labels'] = list(df.index)
