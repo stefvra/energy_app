@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import datetime
+from unittest import result
 import pandas as pd
 import logging
 import math
@@ -81,10 +82,6 @@ class PV_Consumption_Processor(Processor):
 
     def process(self, dfs):
 
-        #start_time = min(dsmr_log.index.to_pydatetime())
-        #stop_time = max(dsmr_log.index.to_pydatetime())
-        #log = log[(log.index > start_time) & (log.index < stop_time)]
-
         df = reduce(lambda left,right: pd.merge(left, right, how='outer', left_index=True, right_index=True), dfs)
         df.interpolate(inplace=True)
         df.fillna(method='bfill', inplace=True)
@@ -106,12 +103,6 @@ class PV_Consumption_Processor(Processor):
         df['to_consumers'] = df['from_PV'] + df['from_grid'] - df['to_grid']
         df['from_grid_cum'] = df['elec_used_t1'] + df['elec_used_t2']
         df['to_grid_cum'] = df['elec_returned_t1'] + df['elec_returned_t2']
-
-
-        #self.filter_bins = 10
-        #self.downsample_rate = 5
-        #df['from_PV_filtered'] = df['from_PV'].rolling(window=self.filter_bins).mean().fillna(method='bfill')
-        #df['to_consumers_filtered'] = df['to_consumers'].rolling(window=self.filter_bins).mean().fillna(method='bfill')
 
         df.drop(columns=['elec_used_t1', 'elec_used_t2', 'elec_returned_t1', 'elec_returned_t2',
             'actual_tariff'], inplace=True)
@@ -141,6 +132,36 @@ class PV_Consumption_Processor(Processor):
 
 
         return result
+
+
+
+
+
+class Gas_Consumption_Processor(Field_Picker):
+
+    def __init__(self):
+        super().__init__(series=['gas_used'], unit='m³/h')
+
+    
+    
+    def _get_diff(self, x, y):
+        x_diff = []
+        y_diff = []
+        for x1, x2, y1, y2 in zip(x[:-1], x[1:], y[:-1], y[1:]):
+            x_diff.append(x1 + (x2 - x1) / 2)
+            y_diff.append((y2 - y1) / (x2 - x1).total_seconds() * 3600)
+        return x_diff, y_diff
+    
+    
+    
+    def process(self, dfs):
+        result = super().process(dfs)
+        x_diff, y_diff = self._get_diff(result['x_labels'], result['series'][0]['data'])
+        result['x_labels'] = x_diff
+        result['series'][0]['data'] = y_diff
+        return result
+
+
 
 
 

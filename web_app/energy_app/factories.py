@@ -142,6 +142,8 @@ class Day_Graph_Model_Factory():
             pv_store = store_register.register(pv_store)
         if params['processor'] == 'pvpower_cons':
             processor = models.logs.PV_Consumption_Processor()
+        elif params['processor'] == 'gas_cons':
+            processor = models.logs.Gas_Consumption_Processor()
         else:
             processor = models.logs.Field_Picker(params['fields'], params['unit'])
         return self.create(dsmr_store, pv_store, params['title'], processor)
