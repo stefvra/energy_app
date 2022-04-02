@@ -161,7 +161,9 @@ class Log_Data_Model(Model):
         kwargs = parsed_request['kwargs']
         for input in self.inputs:
             try:
-                dfs.append(input.get(*args, **kwargs))
+                df = input.get(*args, **kwargs)
+                df.sort_index(inplace=True)
+                dfs.append(df)
             except:
                 pass
         return dfs
@@ -175,6 +177,7 @@ class Log_Data_Model(Model):
             df.dropna(inplace=True)
         except:
             df = df.interpolate(method='bfill').interpolate(method='ffill')
+        df.sort_index(inplace=True)
         return df
 
 
