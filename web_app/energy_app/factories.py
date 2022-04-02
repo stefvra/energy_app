@@ -22,12 +22,12 @@ class Dashboard_Controller_Factory():
 
         self.model_register = {
             'realtime': ['realtime_labels.html', Realtime_Model_Factory],
-            'day_graph': ['day_graph.html', Day_Graph_Model_Factory],
+            'day_graph': ['graph.html', Day_Graph_Model_Factory],
             'day_totals': ['cumulative_labels.html', Day_Totals_Model_Factory],
             'date_buttons': ['date_buttons.html', Date_Buttons_Model_Factory],
             'totals': ['cumulative_labels.html', Totals_Model_Factory],
             'client': ['client.html', Client_Model_Factory],
-            'summarized_graph': ['client.html', Totals_Graph_Model_Factory]
+            'summarized_graph': ['graph.html', Totals_Graph_Model_Factory]
 
         }
 
@@ -141,11 +141,11 @@ class Day_Graph_Model_Factory():
             _stores.append(store)
 
 
-        if params['processor'] == 'pvpower_cons':
+        if params['processor'] == 'elec':
             processor = models.logs.PV_Consumption_Processor()
             fields = ['to_consumers', 'from_PV']
             unit = 'kWh'
-        elif params['processor'] == 'gas_cons':
+        elif params['processor'] == 'gas':
             processor = models.logs.Gas_Consumption_Processor()
             fields = ['gas_used']
             unit = 'm³/h'
@@ -158,19 +158,33 @@ class Day_Graph_Model_Factory():
 
 
 
+
 class Totals_Graph_Model_Factory():
 
     def __init__(self):
         self.param_parser = Param_Parser()
         self.param_register = {
-            'pv_store': {'type': 'string'},
-            'dsmr_store': {'type': 'string'}, 
+            'stores': {'type': 'string_list'}, 
             'activate': {'type': 'bool', 'default': True},
-            'title': {'type': 'string', 'default': 'Totals Graph'}            
+            'title': {'type': 'string', 'default': 'Day Graph'},
+            'processor': {'type': 'string', 'default': 'field_picker'},
+            'fields': {'type': 'string_list', 'default': ''},
+            'unit': {'type': 'string', 'default': ''}            
         }
 
-    def create(self, dsmr_store, pv_store, title):
-        return models.basic.Summarized_Data_Model(dsmr_store, pv_store, title)
+    def create(self, _stores, fields, unit, title, processor):
+        
+        _inputs = [inputs.Store_Get(store) for store in _stores]
+        request_parser = models.logs.Last_N_Days_Request_Parser(n_days=365)
+        return models.logs.Log_Data_Model(
+            _inputs,
+            title,
+            fields=fields,
+            unit=unit,
+            x_format='date',
+            processor=processor,
+            request_parser=request_parser
+            )
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -183,14 +197,25 @@ class Totals_Graph_Model_Factory():
         if not params['activate']:
             return None
 
-        dsmr_store = stores.Store_Factory().create_from_config(config_store, params['dsmr_store'])
-        pv_store = stores.Store_Factory().create_from_config(config_store, params['pv_store'])
-        if store_register is not None:
-            dsmr_store = store_register.register(dsmr_store)
-            pv_store = store_register.register(pv_store)
-        return self.create(dsmr_store, pv_store, params['title'])
+        _stores = []
+        
+        for store_name in params['stores']:
+            store = stores.Store_Factory().create_from_config(config_store, store_name)
+            if store_register is not None:
+                store = store_register.register(store)
+            _stores.append(store)
 
 
+        if params['processor'] == 'elec':
+            processor = models.logs.Totals_PV_Consumption_Processor()
+            fields = ['from_PV_cum', 'to_grid_cum', 'from_grid_cum']
+            unit = 'kWh'
+        elif params['processor'] == 'gas':
+            processor = models.logs.Idle_Processor()
+            fields = ['gas_used']
+            unit = 'm³'
+
+        return self.create(_stores, fields, unit, params['title'], processor)
 
 
 

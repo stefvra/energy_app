@@ -1,3 +1,12 @@
+{% if section.x_format == 'date' %}
+{% set x_format = date_format %}
+{% else %}
+{% set x_format = time_format %}
+{% endif %}
+
+
+
+
 <div class="card mb-3">
     <div class="card-header" >
       <i class="fa fa-area-chart" ></i> 
@@ -10,7 +19,7 @@
   </div>
 
   <script>
-    var x_labels = [{% for time_inst in section.x_labels %} '{{ time_inst.strftime(graph_time_format) }}',  {% endfor %}];
+    var x_labels = [{% for time_inst in section.x_labels %} '{{ time_inst.strftime(x_format) }}',  {% endfor %}];
   </script> 
   <script src={{ url_for("static", filename="vendor/chart.js/Chart.min.js") }}></script>
   <script>

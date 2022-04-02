@@ -20,13 +20,27 @@ logger = logging.getLogger('web_app_moddels')
 class Request_Parser(ABC):
     @abstractmethod
     def parse(self, request):
-        pass
+        return {'args': [], 'kwargs': {}}
 
 class Day_Request_Parser(Request_Parser):
+    
     def parse(self, request):
         to_date = lambda ds: datetime.datetime.strptime(ds, "%Y-%m-%d").date()
         requested_date = request.args.get('date', default=datetime.date.today(), type=to_date)
-        return requested_date
+        return {'args': [requested_date], 'kwargs': {}}
+
+
+
+class Last_N_Days_Request_Parser(Request_Parser):
+    
+    def __init__(self, n_days=30):
+        self.n_days = n_days
+    
+    def parse(self, request):
+        stop = datetime.datetime.now()
+        start = stop - datetime.timedelta(days=self.n_days)
+        return {'args': [start, stop], 'kwargs': {}}
+
 
 
 
@@ -43,10 +57,6 @@ class Idle_Processor(Processor):
 
 
 class PV_Consumption_Processor(Processor):
-
-    def __init__(self, PV_label='From PV', cons_label='To Consumers'):
-        self.PV_label = PV_label
-        self.cons_label = cons_label
 
     def process(self, df):
 
@@ -69,6 +79,35 @@ class PV_Consumption_Processor(Processor):
 
         df.drop(columns=['elec_used_t1', 'elec_used_t2', 'elec_returned_t1', 'elec_returned_t2',
             'actual_tariff'], inplace=True)
+        
+        return df
+
+
+
+class Totals_PV_Consumption_Processor(Processor):
+
+    def process(self, df):
+
+
+        df.rename(columns = {
+            'actual_elec_delivered':'from_PV',
+            'actual_elec_used': 'from_grid',
+            'actual_elec_returned': 'to_grid',
+            'total_elec_delivered': 'from_PV_cum'
+            },
+            inplace = True)
+
+        df['from_PV'] = df['from_PV'] / 1000
+        df['from_PV_cum'] = df['from_PV_cum'] / 1000
+        df['from_PV_cum'] = df['from_PV_cum'].clip(lower=0)
+
+
+        df['to_consumers'] = df['from_PV'] + df['from_grid'] - df['to_grid']
+        df['from_grid_cum'] = df['elec_used_t1'] + df['elec_used_t2']
+        df['to_grid_cum'] = df['elec_returned_t1'] + df['elec_returned_t2']
+
+        df.drop(columns=['elec_used_t1', 'elec_used_t2', 'elec_returned_t1', 'elec_returned_t2',
+            'actual_tariff', 'from_PV'], inplace=True)
         
         return df
 
@@ -101,6 +140,7 @@ class Log_Data_Model(Model):
         title,
         fields=None,
         unit='',
+        x_format='time', 
         processor=Idle_Processor(),
         request_parser=Day_Request_Parser()
         ):
@@ -111,14 +151,17 @@ class Log_Data_Model(Model):
         self.processor = processor
         self.fields = fields
         self.unit = unit
+        self.x_format = x_format
         super().__init__(title)
 
 
     def get_inputs(self, parsed_request):
         dfs = []
+        args = parsed_request['args']
+        kwargs = parsed_request['kwargs']
         for input in self.inputs:
             try:
-                dfs.append(input.get(parsed_request))
+                dfs.append(input.get(*args, **kwargs))
             except:
                 pass
         return dfs
@@ -144,6 +187,7 @@ class Log_Data_Model(Model):
         result['series'] = []
         result['id'] = uuid.uuid1()
         result['unit'] = self.unit
+        result['x_format'] = self.x_format
 
         if self.fields is None:
             fields = df.columns
