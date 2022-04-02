@@ -32,46 +32,14 @@ class Day_Request_Parser(Request_Parser):
 
 class Processor(ABC):
     @abstractmethod
-    def process(self, dfs):
+    def process(self, df):
         pass
 
+class Idle_Processor(Processor):
+    
+    def process(self, df):
+        return df
 
-class Field_Picker(Processor):
-
-    def __init__(self, series, unit):
-        self.series = series
-        self.unit = unit
-
-    def process(self, dfs):
-
-        #start_time = min(dsmr_log.index.to_pydatetime())
-        #stop_time = max(dsmr_log.index.to_pydatetime())
-        #log = log[(log.index > start_time) & (log.index < stop_time)]
-
-        df = reduce(lambda left,right: pd.merge(left, right, how='outer', left_index=True, right_index=True), dfs)
-        try:
-            df.interpolate(inplace=True)
-            df.fillna(method='bfill', inplace=True)
-            df.dropna(inplace=True)
-        except:
-            df = df.interpolate(method='bfill').interpolate(method='ffill')
-
-        result = {}
-        result['x_labels'] = list(df.index)
-        result['last_updated'] = max(df.index)
-        result['series'] = []
-        result['id'] = uuid.uuid1()
-        result['unit'] = self.unit
-
-        for serie in self.series:
-            result['series'].append(
-                {
-                    'label': serie,
-                    'data': list(df[serie].values),
-                }
-            )
-        
-        return result
 
 
 class PV_Consumption_Processor(Processor):
@@ -80,12 +48,7 @@ class PV_Consumption_Processor(Processor):
         self.PV_label = PV_label
         self.cons_label = cons_label
 
-    def process(self, dfs):
-
-        df = reduce(lambda left,right: pd.merge(left, right, how='outer', left_index=True, right_index=True), dfs)
-        df.interpolate(inplace=True)
-        df.fillna(method='bfill', inplace=True)
-        df.dropna(inplace=True)
+    def process(self, df):
 
 
         df.rename(columns = {
@@ -106,60 +69,23 @@ class PV_Consumption_Processor(Processor):
 
         df.drop(columns=['elec_used_t1', 'elec_used_t2', 'elec_returned_t1', 'elec_returned_t2',
             'actual_tariff'], inplace=True)
-
-
-
-        result = {}
-        result['x_labels'] = list(df.index)
-        result['last_updated'] = max(df.index)
-        result['series'] = []
-        result['unit'] = 'kWh'
-        result['id'] = uuid.uuid1()
-
-        result['series'].append(
-            {
-                'label': self.PV_label,
-                'data': list(df['from_PV'].values),
-            }
-        )
         
-        result['series'].append(
-            {
-                'label': self.cons_label,
-                'data': list(df['to_consumers'].values),
-            }
-        )
-
-
-        return result
+        return df
 
 
 
 
 
-class Gas_Consumption_Processor(Field_Picker):
+class Gas_Consumption_Processor(Processor):
 
-    def __init__(self):
-        super().__init__(series=['gas_used'], unit='m³/h')
-
-    
-    
-    def _get_diff(self, x, y):
-        x_diff = []
-        y_diff = []
-        for x1, x2, y1, y2 in zip(x[:-1], x[1:], y[:-1], y[1:]):
-            x_diff.append(x1 + (x2 - x1) / 2)
-            y_diff.append((y2 - y1) / (x2 - x1).total_seconds() * 3600)
-        return x_diff, y_diff
-    
-    
-    
-    def process(self, dfs):
-        result = super().process(dfs)
-        x_diff, y_diff = self._get_diff(result['x_labels'], result['series'][0]['data'])
-        result['x_labels'] = x_diff
-        result['series'][0]['data'] = y_diff
-        return result
+   
+    def process(self, df):
+        s = df['gas_used']
+        s.sort_index(inplace=True)
+        s_diff = s.diff() / (s.index.to_series().diff().dt.total_seconds() / 3600)
+        s_diff.dropna(inplace=True)
+        df = s_diff.to_frame(name='gas_used')
+        return df
 
 
 
@@ -167,49 +93,81 @@ class Gas_Consumption_Processor(Field_Picker):
 
 
 
-class Day_Data_Model(Model):
+class Log_Data_Model(Model):
 
-    def __init__(self, _inputs, title, processor, request_parser=Day_Request_Parser()):
+    def __init__(
+        self,
+        _inputs,
+        title,
+        fields=None,
+        unit='',
+        processor=Idle_Processor(),
+        request_parser=Day_Request_Parser()
+        ):
 
 
         self.inputs = _inputs
         self.request_parser = request_parser
         self.processor = processor
+        self.fields = fields
+        self.unit = unit
         super().__init__(title)
 
 
-    def get_inputs(self, request):
-        to_date = lambda ds: datetime.datetime.strptime(ds, "%Y-%m-%d").date()
-        requested_date = request.args.get('date', default=datetime.date.today(), type=to_date)
-        results = []
-        for input in self.inputs:
-            try:
-                df = input.input.get(requested_date)
-                df = df[input['field']]
-                results.append[df]
-            except:
-                pass
-        return results
-
-
-
-
-    def get(self, request):
-
-        parsed_request = self.request_parser.parse(request)
+    def get_inputs(self, parsed_request):
         dfs = []
         for input in self.inputs:
             try:
                 dfs.append(input.get(parsed_request))
             except:
                 pass
-        
-
-        result = self.processor.process(dfs)
+        return dfs
 
 
-        dfs = self.get_inputs(request)
+    def merge_inputs(self, dfs):
+        df = reduce(lambda left,right: pd.merge(left, right, how='outer', left_index=True, right_index=True), dfs)
+        try:
+            df.interpolate(inplace=True)
+            df.fillna(method='bfill', inplace=True)
+            df.dropna(inplace=True)
+        except:
+            df = df.interpolate(method='bfill').interpolate(method='ffill')
+        return df
+
+
+    def generate_result(self, df):
+
+        result = {}
         result['title'] = self.title
+        result['x_labels'] = list(df.index)
+        result['last_updated'] = max(df.index)
+        result['series'] = []
+        result['id'] = uuid.uuid1()
+        result['unit'] = self.unit
+
+        if self.fields is None:
+            fields = df.columns
+        else:
+            fields = self.fields
+
+        for field in fields:
+            result['series'].append(
+                {
+                    'label': field,
+                    'data': list(df[field].values),
+                }
+            )
+        
+        return result
+
+
+    def get(self, request):
+
+        parsed_request = self.request_parser.parse(request)
+        dfs = self.get_inputs(parsed_request)
+        df = self.merge_inputs(dfs)
+        df = self.processor.process(df)
+        result = self.generate_result(df)
 
         return result
 

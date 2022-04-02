@@ -27,7 +27,7 @@ class Dashboard_Controller():
                     model_data = dict()
                     model_data['template'] = self.error_template
                     model_data['message'] = f'Unable to get data for {model.title}...'
-                data.append(model_data)
+            data.append(model_data)
         return render_template(self.main_template, data=data)
 
 

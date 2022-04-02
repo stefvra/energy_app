@@ -108,21 +108,18 @@ class Day_Graph_Model_Factory():
     def __init__(self):
         self.param_parser = Param_Parser()
         self.param_register = {
-            'pv_store': {'type': 'string'},
-            'dsmr_store': {'type': 'string'}, 
+            'stores': {'type': 'string_list'}, 
             'activate': {'type': 'bool', 'default': True},
             'title': {'type': 'string', 'default': 'Day Graph'},
-            'processor': {'type': 'string', 'default': 'pvpower_cons'},
+            'processor': {'type': 'string', 'default': 'field_picker'},
             'fields': {'type': 'string_list', 'default': ''},
             'unit': {'type': 'string', 'default': ''}            
         }
 
-    def create(self, dsmr_store, pv_store, title, processor):
-        _inputs = [
-            inputs.Store_Get_Day(pv_store),
-            inputs.Store_Get_Day(dsmr_store),
-        ]
-        return models.logs.Day_Data_Model(_inputs, title, processor)
+    def create(self, _stores, fields, unit, title, processor):
+        
+        _inputs = [inputs.Store_Get_Day(store) for store in _stores]
+        return models.logs.Log_Data_Model(_inputs, title, fields=fields, unit=unit, processor=processor)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -135,18 +132,28 @@ class Day_Graph_Model_Factory():
         if not params['activate']:
             return None
 
-        dsmr_store = stores.Store_Factory().create_from_config(config_store, params['dsmr_store'])
-        pv_store = stores.Store_Factory().create_from_config(config_store, params['pv_store'])
-        if store_register is not None:
-            dsmr_store = store_register.register(dsmr_store)
-            pv_store = store_register.register(pv_store)
+        _stores = []
+        
+        for store_name in params['stores']:
+            store = stores.Store_Factory().create_from_config(config_store, store_name)
+            if store_register is not None:
+                store = store_register.register(store)
+            _stores.append(store)
+
+
         if params['processor'] == 'pvpower_cons':
             processor = models.logs.PV_Consumption_Processor()
+            fields = ['to_consumers', 'from_PV']
+            unit = 'kWh'
         elif params['processor'] == 'gas_cons':
             processor = models.logs.Gas_Consumption_Processor()
+            fields = ['gas_used']
+            unit = 'm³/h'
         else:
-            processor = models.logs.Field_Picker(params['fields'], params['unit'])
-        return self.create(dsmr_store, pv_store, params['title'], processor)
+            processor = models.logs.Idle_Processor()
+            fields = params['fields']
+            unit = params['unit']
+        return self.create(_stores, fields, unit, params['title'], processor)
 
 
 
