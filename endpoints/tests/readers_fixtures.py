@@ -104,8 +104,10 @@ def reader_fixture(httpserver):
                 pwd = 'pwd'
                 emulator = SMA_Emulator(pwd)
                 query_string = f'sid={emulator.get_sid()}'
-                logon_json = {'right': 'usr', 'pass': pwd}
-                httpserver.expect_request("/dyn/login.json", method='POST', json=logon_json).respond_with_handler(emulator.login_request_handler())
+                logon_json = "{\"right\":\"usr\",\"pass\":\"" + pwd + "\"}"
+                #httpserver.expect_request("/dyn/login1.json", method='GET').respond_with_json({"foo": "bar"})
+                #httpserver.expect_request("/dyn/login.json", method='GET').respond_with_handler(emulator.default_request_handler())
+                httpserver.expect_request("/dyn/login.json", method='POST', data=logon_json).respond_with_handler(emulator.login_request_handler())
                 httpserver.expect_request("/dyn/logout.json", query_string=query_string, method='POST').respond_with_handler(emulator.logout_request_handler())
                 httpserver.expect_request("/dyn/getValues.json", query_string=query_string, method='POST').respond_with_handler(emulator.getvalues_request_handler())
                 reader = SMA_Reader(httpserver.url_for("/"), pwd)

@@ -9,6 +9,7 @@ import subprocess
 import multiprocessing
 import numpy as np
 import pytz
+from werkzeug.wrappers.response import Response
 
 
 
@@ -404,7 +405,8 @@ class Fronius_Emulator():
 
 class SMA_Emulator():
 
-    def __init__(self, response_time=0):
+    def __init__(self, pwd, response_time=0):
+        self.pwd = pwd
         self.response_time = response_time
         self.sid = 'sidsid'
 
@@ -458,7 +460,7 @@ class SMA_Emulator():
 
 
 
-    def get_values_request_handler(self):
+    def getvalues_request_handler(self):
         def f(request):
             time.sleep(self.response_time)
             return self._dump_data(request)
@@ -467,7 +469,11 @@ class SMA_Emulator():
     def login_request_handler(self):
         def f(request):
             time.sleep(self.response_time)
-            return json.dumps({'result': {'sid': self.sid}})
+            d = json.loads(request.data)
+            if d['pass'] == self.pwd:
+                return Response(json.dumps({'result': {'sid': self.sid}}))
+            else:
+                return "<Response [401]>"
         return f
 
     def logout_request_handler(self):
@@ -477,6 +483,10 @@ class SMA_Emulator():
         return f
     
 
+    def default_request_handler(self):
+        def f(request):
+            return "<Response [200]>"
+        return f
 
 
 

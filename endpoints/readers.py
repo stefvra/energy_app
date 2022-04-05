@@ -427,29 +427,29 @@ class SMA_Reader(Reader):
 
 
     def post(self, url, payload):
-        response = requests.request("POST", url, data = payload, verify=False, timeout=self.time_out)
+        response = requests.post(url, data=payload, verify=False, timeout=self.time_out)
         return response
 
     async def async_post(self, url, payload):
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, data = payload, verify=False, timeout=self.time_out) as response_fut:
+            async with session.post(url, data=payload, verify=False, timeout=self.time_out) as response_fut:
                 response = await response_fut
         return response
 
 
     def get_login_data(self):
-        url = 'https://' + self.ip + '/dyn/login.json'
-        payload = "{\"right\":\"usr\",\"pass\":\"" + self.pw + "\"}"
+        url = self.ip + '/dyn/login.json'
+        payload = "{\"right\":\"usr\",\"pass\":\"" + self.pwd + "\"}"
         return url, payload
 
     def get_logout_data(self, sid):
-        url = 'https://' + self.ip + '/dyn/logout.json?sid=' + sid
+        url = self.ip + '/dyn/logout.json?sid=' + sid
         payload = "{}"
         return url, payload
 
 
     def get_query_data(self, sid):
-        url = 'https://' + self.ip + "/dyn/getValues.json?sid=" + sid
+        url = self.ip + "/dyn/getValues.json?sid=" + sid
         payload = {"destDev": [], "keys ": self.get_query_keys() }
         return url, payload
 
@@ -460,16 +460,16 @@ class SMA_Reader(Reader):
         Returns:
             DataFrame: DataFrame that is read from the server. localize to reader timezone
         """
-        try:
-            request_time = datetime.datetime.now(self.timezone)
-            sid = self.post(*self.get_login_data()).json()['sid']
-            response = self.post(self.get_query_data(sid)).json()
-            response_time = datetime.datetime.now(self.timezone)
-            self.post(self.get_logout_data(sid))
-            df = self._log_to_df(response.text, request_time, response_time)
-            return df
-        except:
-            return None
+        #try:
+        request_time = datetime.datetime.now(self.timezone)
+        login_response = self.post(*self.get_login_data())
+        sid = login_response.json()['result']['sid']
+        query_response = self.post(*self.get_query_data(sid))
+        response_time = datetime.datetime.now(self.timezone)
+        self.post(*self.get_logout_data(sid))
+        df = self._log_to_df(query_response.text, request_time, response_time)
+        return df
+
 
 
     async def _async_read(self):
@@ -498,7 +498,7 @@ class SMA_Reader(Reader):
         temp_dict = list(temp_dict.values())[0]
         for key, value in temp_dict.items():
             if key in keys:
-                d[key] = value[1][0]['val']
+                d[keys[key]] = value['1'][0]['val']
         return d
 
 
@@ -523,7 +523,7 @@ class SMA_Reader(Reader):
                     'system_request_time': request_time,
                     'system_response_time': response_time,
                     'actual_elec_delivered': float(result_dict['solar_act']),
-                    'day_elec_delivered': 0,
+                    'day_elec_delivered': float(0),
                     'total_elec_delivered': float(result_dict['solar_total']),
                 }
             ]

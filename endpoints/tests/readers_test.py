@@ -36,7 +36,7 @@ def test_fronius_reader_timeout_read(reader_fixture):
     [
         'mock_reader',
         'fronius_reader',
-        'SMA_Reader',        
+        'mock_SMA_reader',        
         'ow_reader',
         'mock_fronius_reader',
         'dsmr_reader_ten_messages_in_buffer',
@@ -67,7 +67,7 @@ def test_faulty_reader_read(reader_param, reader_fixture):
     [
         'mock_reader',
         'fronius_reader',
-        'SMA_Reader',        
+        'mock_SMA_reader',        
         'SMA_Reader',
         'ow_reader',
         'mock_fronius_reader',
@@ -141,7 +141,7 @@ async def test_DSMR_reader_buffer_faulty_message(reader_fixture):
     'reader_param',
     [
         'fronius_reader',
-        'SMA_Reader',        
+        'mock_SMA_reader',        
         'ow_reader',
         'dsmr_reader_ten_messages_in_buffer',
         'mock_fronius_reader'
@@ -166,7 +166,7 @@ async def test_reader_correct_time(reader_param, reader_fixture):
     'reader_param',
     [
         'fronius_reader',
-        'SMA_Reader',        
+        'mock_SMA_reader',        
         'ow_reader',
         'dsmr_reader_ten_messages',
         'dsmr_reader_faulty_messages',
