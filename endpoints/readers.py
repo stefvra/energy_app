@@ -358,6 +358,185 @@ class OW_Reader(HttpReader):
         return df
 
 
+
+
+
+class SMAReader(Reader):
+    """
+        Class that manages reading trough http requests with authentication
+    """
+ 
+    def __init__(self, ip, pwd, time_out=(3, 8), timezone=_reader_timezone):
+        """
+            Initialization
+
+        Args:
+            url (string): url to request for
+            time_out (int, optional): timout value. Defaults to 4 seconds.
+            timezone (timezone, optional): See base class. Defaults to _reader_timezone.
+        """
+        self.ip = ip
+        self.pwd = pwd
+        self.time_out = time_out
+        super().__init__(timezone)
+
+
+    def __eq__(self, other):
+        """
+            Method that checks equallity between readers
+
+        Args:
+            other (HttpReader): reader to compare to
+
+        Returns:
+            boolean: true if self and other are considered equal
+        """
+        if self.url == other.url and \
+            self.time_out == other.time_out and \
+                self.timezone == other.timezone:
+            return True
+        return False
+        
+
+    def login(self):
+        url = 'https://' + self.ip + '/dyn/login.json'
+        payload = "{\"right\":\"usr\",\"pass\":\"" + self.pw + "\"}"
+        try:
+            response = requests.request("POST", url, data = payload, verify=False, timeout=self.time_out)
+            if response.status_code == 200:
+                if "result" in response.json():
+                    return response.json()['result']['sid']
+            return None
+        except:
+            return None
+
+
+
+
+    def logout(self, sid):
+        url = 'https://' + self.ip + '/dyn/logout.json?sid=' + sid
+        response = requests.request("POST", url, data = "{}", verify=False, timeout=self.time_out)
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+
+
+
+    def query_values(self, sid):
+
+        global descriptions
+        url = 'https://' + self.ip + "/dyn/getValues.json?sid=" + sid
+        payload = {"destDev": [], "keys ": [] }
+        measurements = []
+        for measurement in measurement_list:
+            if measurement_list[measurement]['key'] not in measurements and measurement_list[measurement]['key'] is not None:
+                measurements.append(measurement_list[measurement]['key'])
+        payload = json.dumps({"destDev": [], "keys": measurements})
+        try:
+            print(f'sending request {url}, {payload}')
+            response = requests.request("POST", url, data = payload, verify=False, timeout=(3, 10))
+            log.debug(response.json())
+            log.debug(response.status_code)
+            if "err" in response.json():
+                if response.json()['err'] == 401:
+                    # Login on SMA Device
+                    sid = login(ip, pw, mode)
+                    while not sid:
+                        log.error("Login on SMA Device (" + ip + ") failed.")
+                        time.sleep(60)
+                        sid = login(ip, pw, mode)
+                    log.info("Login on SMA Device successfull.")
+            else:
+                for id in response.json()['result']:
+                    sma_data = response.json()['result'][id]
+        except:
+            log.error("Query Failed...")
+
+        values = {}
+        for measurement in measurement_list:
+            if measurement_list[measurement]['key'] is not None:
+                key = measurement_list[measurement]['key']
+                typ = measurement_list[measurement]['type']
+                val = measurement_list[measurement]['val']
+                if typ == "int":
+                    try:
+                        for id in sma_data[key]:
+                            values[measurement] = int(sma_data[key][id][val]['val'])
+                    except:
+                        values[measurement] = 0
+                elif typ == "calc":
+                    values[measurement] = 0
+                elif typ == "tag":
+                    try:
+                        for id in sma_data[key]:
+                            values[measurement] = descriptions[str(sma_data[key][id][val]['val'][0]['tag'])]
+                    except:
+                        values[measurement] = str("-")
+                else:
+                    try:
+                        for id in sma_data[key]:
+                            values[measurement] = str(sma_data[key][id][val]['val'])
+                    except:
+                        values[measurement] = str("-")
+        for measurement in measurement_list:
+            typ = measurement_list[measurement]['type']
+            if typ == "calc":
+                try:
+                    values[measurement] = values[measurement_list[measurement]['field1']]-values[measurement_list[measurement]['field2']]+values[measurement_list[measurement]['field3']]
+                except:
+                    pass
+        return values
+
+
+
+
+
+
+
+
+
+
+    def _read(self):
+        """
+            Method that reads from the http server
+
+        Returns:
+            DataFrame: DataFrame that is read from the server. localize to reader timezone
+        """
+        request_time = datetime.datetime.now(self.timezone)
+        response = requests.get(self.url, timeout=self.time_out)
+        response_time = datetime.datetime.now(self.timezone)
+        df = self._log_to_df(response.text, request_time, response_time)
+        return df
+
+
+    async def _async_read(self):
+        """
+            Method that reads asynchronous from the http server
+
+        Returns:
+            DataFrame: DataFrame that is read from the server
+        """
+        try:
+            request_time = datetime.datetime.now(self.timezone)
+            timeout = aiohttp.ClientTimeout(total=self.time_out)
+            async with aiohttp.ClientSession() as session:
+                    async with session.get(self.url, timeout=timeout) as response:
+                        html = await response.text()
+            response_time = datetime.datetime.now(self.timezone)
+            logger.debug('http reader fetched')
+            logger.debug(f'request time: {request_time}')
+        except:
+            return None
+        df = self._log_to_df(html, request_time, response_time)
+        return df
+
+
+
+
+
+
 class DSMR_take_strategy():
     def __init__(self):
         pass
