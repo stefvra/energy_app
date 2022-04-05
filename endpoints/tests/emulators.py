@@ -400,3 +400,83 @@ class Fronius_Emulator():
         return f
     
 
+
+
+class SMA_Emulator():
+
+    def __init__(self, response_time=0):
+        self.response_time = response_time
+        self.sid = 'sidsid'
+
+
+    def get_sid(self):
+        return self.sid
+
+
+    def _dump_data(self, request):
+        response = {   'result': {   '0199-xxxxxE86': {   '6100_00464800': {'1': [{'val': 24386}]},
+                                            '6100_00464900': {   '1': [   {   'val': 'None'}]},
+                                            '6100_00464A00': {   '1': [   {   'val': 'None'}]},
+                                            '6100_00465700': {'1': [{'val': 5001}]},
+                                            '6100_0046E800': {   '1': [   {   'val': 'None'}]},
+                                            '6100_0046E900': {   '1': [   {   'val': 'None'}]},
+                                            '6100_0046EA00': {   '1': [   {   'val': 'None'}]},
+                                            '6100_0046EB00': {   '1': [   {   'val': 'None'}]},
+                                            '6100_0046EC00': {   '1': [   {   'val': 'None'}]},
+                                            '6100_0046ED00': {   '1': [   {   'val': 'None'}]},
+                                            '6100_40263F00': {'1': [{'val': 1006}]},
+                                            '6100_40463600': {   '1': [   {   'val': 'None'}]},
+                                            '6100_40463700': {   '1': [   {   'val': 'None'}]},
+                                            '6100_40464000': {'1': [{'val': 1006}]},
+                                            '6100_40464100': {   '1': [   {   'val': 'None'}]},
+                                            '6100_40464200': {   '1': [   {   'val': 'None'}]},
+                                            '6100_40465300': {'1': [{'val': 4238}]},
+                                            '6100_40465400': {   '1': [   {   'val': 'None'}]},
+                                            '6100_40465500': {   '1': [   {   'val': 'None'}]},
+                                            '6380_40251E00': {   '1': [   {   'val': 595},
+                                                                            {   'val': 515}]},
+                                            '6380_40451F00': {   '1': [   {   'val': 26106},
+                                                                            {   'val': 23480}]},
+                                            '6380_40452100': {   '1': [   {   'val': 2280},
+                                                                            {   'val': 2195}]},
+                                            '6400_00462400': {   '1': [   {   'val': 'None'}]},
+                                            '6400_00462500': {   '1': [   {   'val': 'None'}]},
+                                            '6400_0046C300': {   '1': [   {   'val': 13593997}]},
+                                            '6800_00A21E00': {   '1': [   {   'high': 'None',
+                                                                                'low': 0,
+                                                                                'val': 3004182150}]},
+                                            '6800_08822000': {   '1': [   {   'val': [   {   'tag': 9402}],
+                                                                                'validVals': [   9401,
+                                                                                                9402,
+                                                                                                9403,
+                                                                                                9404,
+                                                                                                9405]}]}}}}
+
+        
+     
+        return json.dumps(response)
+
+
+
+    def get_values_request_handler(self):
+        def f(request):
+            time.sleep(self.response_time)
+            return self._dump_data(request)
+        return f
+
+    def login_request_handler(self):
+        def f(request):
+            time.sleep(self.response_time)
+            return json.dumps({'result': {'sid': self.sid}})
+        return f
+
+    def logout_request_handler(self):
+        def f(request):
+            time.sleep(self.response_time)
+            return "<Response [200]>"
+        return f
+    
+
+
+
+

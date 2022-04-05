@@ -1,4 +1,5 @@
 
+import json
 import pytest
 import os
 import time
@@ -11,6 +12,7 @@ from endpoints.readers import (
     Reader,
     DSMR_Reader,
     Fronius_Reader,
+    SMA_Reader,
     MCP3008Reader,
     Reader_Factory
 )
@@ -18,7 +20,8 @@ from endpoints.readers import (
 from endpoints.tests.emulators import (
     DSMR_Emulator,
     DSMR_message_emulator,
-    Fronius_Emulator
+    Fronius_Emulator,
+    SMA_Emulator,
 )
 
 from tools.test_tools.general_fixtures import Dataframe_Generator
@@ -97,6 +100,15 @@ def reader_fixture(httpserver):
                 emulator = Fronius_Emulator()
                 httpserver.expect_request("/").respond_with_handler(emulator.request_handler())
                 reader = Fronius_Reader(httpserver.url_for("/"))
+            elif tag == 'mock_SMA_reader':
+                pwd = 'pwd'
+                emulator = SMA_Emulator(pwd)
+                query_string = f'sid={emulator.get_sid()}'
+                logon_json = {'right': 'usr', 'pass': pwd}
+                httpserver.expect_request("/dyn/login.json", method='POST', json=logon_json).respond_with_handler(emulator.login_request_handler())
+                httpserver.expect_request("/dyn/logout.json", query_string=query_string, method='POST').respond_with_handler(emulator.logout_request_handler())
+                httpserver.expect_request("/dyn/getValues.json", query_string=query_string, method='POST').respond_with_handler(emulator.getvalues_request_handler())
+                reader = SMA_Reader(httpserver.url_for("/"), pwd)
             elif tag == 'mock_timeout_fronius_reader':
                 response_time = 1
                 emulator = Fronius_Emulator(response_time=response_time)

@@ -24,6 +24,10 @@ def get_local_timezone():
     return pytz.timezone('Europe/Amsterdam')
 
 
+def get_SMA_config_file():
+    return 'config/general/SMA_measurements.json'
+
+
 
 def get_log_config_file(app_state=None):
     if app_state is None:

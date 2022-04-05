@@ -15,6 +15,7 @@ import numpy as np
 from serial.serialutil import SerialException
 
 from tools.factory_tools import Param_Parser
+from tools import tools
 
 # try to umport the Raspberry Pi reader classes
 # if not available create mock classes
@@ -361,12 +362,12 @@ class OW_Reader(HttpReader):
 
 
 
-class SMAReader(Reader):
+class SMA_Reader(Reader):
     """
         Class that manages reading trough http requests with authentication
     """
  
-    def __init__(self, ip, pwd, time_out=(3, 8), timezone=_reader_timezone):
+    def __init__(self, ip, pwd, time_out=(3, 8), timezone=_reader_timezone, conf_file=tools.get_SMA_config_file()):
         """
             Initialization
 
@@ -378,7 +379,22 @@ class SMAReader(Reader):
         self.ip = ip
         self.pwd = pwd
         self.time_out = time_out
+        with open(conf_file) as f:
+            self.config = json.load(f)
         super().__init__(timezone)
+
+
+
+        self.time_field = 'system_response_time'
+
+        self.fields = {
+            'system_request_time': 'datetime',
+            'system_response_time': 'datetime',
+            'actual_elec_delivered': 'float',
+            'day_elec_delivered': 'float',
+            'total_elec_delivered': 'float',
+        }
+
 
 
     def __eq__(self, other):
@@ -391,111 +407,51 @@ class SMAReader(Reader):
         Returns:
             boolean: true if self and other are considered equal
         """
-        if self.url == other.url and \
+        if self.ip == other.ip and \
             self.time_out == other.time_out and \
-                self.timezone == other.timezone:
+                self.timezone == other.timezone and \
+                    self.pwd == other.pwd and \
+                        self.config == other.config:
             return True
         return False
-        
 
-    def login(self):
+
+
+
+    def get_query_keys(self):
+        query_keys = []
+        for item in self.config:
+            if item['required'] == 'mandatory' or item['active'] == True:
+                query_keys.append(item['key'])
+        return query_keys
+
+
+    def post(self, url, payload):
+        response = requests.request("POST", url, data = payload, verify=False, timeout=self.time_out)
+        return response
+
+    async def async_post(self, url, payload):
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data = payload, verify=False, timeout=self.time_out) as response_fut:
+                response = await response_fut
+        return response
+
+
+    def get_login_data(self):
         url = 'https://' + self.ip + '/dyn/login.json'
         payload = "{\"right\":\"usr\",\"pass\":\"" + self.pw + "\"}"
-        try:
-            response = requests.request("POST", url, data = payload, verify=False, timeout=self.time_out)
-            if response.status_code == 200:
-                if "result" in response.json():
-                    return response.json()['result']['sid']
-            return None
-        except:
-            return None
+        return url, payload
 
-
-
-
-    def logout(self, sid):
+    def get_logout_data(self, sid):
         url = 'https://' + self.ip + '/dyn/logout.json?sid=' + sid
-        response = requests.request("POST", url, data = "{}", verify=False, timeout=self.time_out)
-        if response.status_code == 200:
-            return True
-        else:
-            return False
+        payload = "{}"
+        return url, payload
 
 
-
-    def query_values(self, sid):
-
-        global descriptions
+    def get_query_data(self, sid):
         url = 'https://' + self.ip + "/dyn/getValues.json?sid=" + sid
-        payload = {"destDev": [], "keys ": [] }
-        measurements = []
-        for measurement in measurement_list:
-            if measurement_list[measurement]['key'] not in measurements and measurement_list[measurement]['key'] is not None:
-                measurements.append(measurement_list[measurement]['key'])
-        payload = json.dumps({"destDev": [], "keys": measurements})
-        try:
-            print(f'sending request {url}, {payload}')
-            response = requests.request("POST", url, data = payload, verify=False, timeout=(3, 10))
-            log.debug(response.json())
-            log.debug(response.status_code)
-            if "err" in response.json():
-                if response.json()['err'] == 401:
-                    # Login on SMA Device
-                    sid = login(ip, pw, mode)
-                    while not sid:
-                        log.error("Login on SMA Device (" + ip + ") failed.")
-                        time.sleep(60)
-                        sid = login(ip, pw, mode)
-                    log.info("Login on SMA Device successfull.")
-            else:
-                for id in response.json()['result']:
-                    sma_data = response.json()['result'][id]
-        except:
-            log.error("Query Failed...")
-
-        values = {}
-        for measurement in measurement_list:
-            if measurement_list[measurement]['key'] is not None:
-                key = measurement_list[measurement]['key']
-                typ = measurement_list[measurement]['type']
-                val = measurement_list[measurement]['val']
-                if typ == "int":
-                    try:
-                        for id in sma_data[key]:
-                            values[measurement] = int(sma_data[key][id][val]['val'])
-                    except:
-                        values[measurement] = 0
-                elif typ == "calc":
-                    values[measurement] = 0
-                elif typ == "tag":
-                    try:
-                        for id in sma_data[key]:
-                            values[measurement] = descriptions[str(sma_data[key][id][val]['val'][0]['tag'])]
-                    except:
-                        values[measurement] = str("-")
-                else:
-                    try:
-                        for id in sma_data[key]:
-                            values[measurement] = str(sma_data[key][id][val]['val'])
-                    except:
-                        values[measurement] = str("-")
-        for measurement in measurement_list:
-            typ = measurement_list[measurement]['type']
-            if typ == "calc":
-                try:
-                    values[measurement] = values[measurement_list[measurement]['field1']]-values[measurement_list[measurement]['field2']]+values[measurement_list[measurement]['field3']]
-                except:
-                    pass
-        return values
-
-
-
-
-
-
-
-
-
+        payload = {"destDev": [], "keys ": self.get_query_keys() }
+        return url, payload
 
     def _read(self):
         """
@@ -504,11 +460,16 @@ class SMAReader(Reader):
         Returns:
             DataFrame: DataFrame that is read from the server. localize to reader timezone
         """
-        request_time = datetime.datetime.now(self.timezone)
-        response = requests.get(self.url, timeout=self.time_out)
-        response_time = datetime.datetime.now(self.timezone)
-        df = self._log_to_df(response.text, request_time, response_time)
-        return df
+        try:
+            request_time = datetime.datetime.now(self.timezone)
+            sid = self.post(*self.get_login_data()).json()['sid']
+            response = self.post(self.get_query_data(sid)).json()
+            response_time = datetime.datetime.now(self.timezone)
+            self.post(self.get_logout_data(sid))
+            df = self._log_to_df(response.text, request_time, response_time)
+            return df
+        except:
+            return None
 
 
     async def _async_read(self):
@@ -520,20 +481,60 @@ class SMAReader(Reader):
         """
         try:
             request_time = datetime.datetime.now(self.timezone)
-            timeout = aiohttp.ClientTimeout(total=self.time_out)
-            async with aiohttp.ClientSession() as session:
-                    async with session.get(self.url, timeout=timeout) as response:
-                        html = await response.text()
+            sid = await self.post(*self.get_login_data()).json()['sid']
+            response = await self.post(self.get_query_data(sid)).json()
             response_time = datetime.datetime.now(self.timezone)
-            logger.debug('http reader fetched')
-            logger.debug(f'request time: {request_time}')
+            await self.post(self.get_logout_data(sid))
+            df = self._log_to_df(response.text, request_time, response_time)
+            return df
         except:
             return None
-        df = self._log_to_df(html, request_time, response_time)
+
+
+    def result_to_dict(self, result):
+        d = {}
+        keys = {c['key']: c['tag'] for c in self.config}
+        temp_dict = list(result.values())[0]
+        temp_dict = list(temp_dict.values())[0]
+        for key, value in temp_dict.items():
+            if key in keys:
+                d[key] = value[1][0]['val']
+        return d
+
+
+    def _log_to_df(self, log, request_time, response_time):
+        """
+        Converts fronius invertor response to dataframe
+
+        Args:
+            log (string): response from fronius invertor
+            request_time (localized datetime): moment that the request was sent out
+            response_time (localized datetime): moment that the request was recieved
+
+        Returns:
+            DataFrame: Dataframe that is read
+        """
+        log_dict = json.loads(log)
+        result_dict = self.result_to_dict(log_dict)
+
+        try:
+            records = [
+                {
+                    'system_request_time': request_time,
+                    'system_response_time': response_time,
+                    'actual_elec_delivered': float(result_dict['solar_act']),
+                    'day_elec_delivered': 0,
+                    'total_elec_delivered': float(result_dict['solar_total']),
+                }
+            ]
+        except:
+            return None
+
+
+        df = pd.DataFrame.from_records(records)
+        df.set_index(self.time_field, inplace=True)
+        df.index = pd.to_datetime(df.index)
         return df
-
-
-
 
 
 
@@ -873,6 +874,8 @@ class Reader_Factory():
 
         if params['type'] == 'FRONIUS':
             return Fronius_Reader_Factory().create_from_config(config_store, section)
+        if params['type'] == 'SMA':
+            return SMA_Reader_Factory().create_from_config(config_store, section)
         elif params['type'] == 'METEO':
             return OW_Reader_Factory().create_from_config(config_store, section)
         elif params['type'] == 'DSMR':
@@ -926,6 +929,45 @@ class Fronius_Reader_Factory():
         self.param_parser.check_types(params, self.param_register)
         
         return Fronius_Reader(params['url'])
+
+
+
+
+class SMA_Reader_Factory():
+    """
+        Factory class for Fronius reader
+    """
+
+    def __init__(self):
+        """
+            Initialization
+        """
+        self.param_parser = Param_Parser()
+        self.param_register = {
+            'ip': {'type': 'string'},
+            'pwd': {'type': 'string'},
+        }
+
+   
+
+    def create_from_config(self, config_store, section):
+        """
+            Create reader from config store
+
+        Args:
+            config_store (config_store): config store that contains configuration
+            section (string): applicable section in the config store
+
+        Returns:
+            reader: created reader
+        """
+
+        params = config_store.get(section)
+        params = self.param_parser.add_defaults(params, self.param_register)
+        self.param_parser.check_types(params, self.param_register)
+        
+        return SMA_Reader(params['ip'], params['pwd'])
+
 
 
 
