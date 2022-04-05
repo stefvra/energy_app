@@ -5,8 +5,13 @@ models/
 sandbox/
 .vscode/
 .pytest_cache
-config/*
+config/general/*
+config/*.sh
+config/supervisord
 !config/general/test.conf
 !config/general/SMA_measurements.json
 !config/logging
 *.DS_Store
+
+
+
