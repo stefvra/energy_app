@@ -7,5 +7,6 @@ sandbox/
 .pytest_cache
 config/*
 !config/general/test.conf
+!config/general/SMA_measurements.json
 !config/logging
 *.DS_Store
