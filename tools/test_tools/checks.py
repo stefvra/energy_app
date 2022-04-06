@@ -141,7 +141,7 @@ def daily_manage_df(df, columns, f, ignore_today=True):
     df.sort_index(inplace=True)
     df.reset_index(inplace=True)
 
-    time_zone = pytz.timezone('Europe/Amsterdam')
+
     def local_index_extractor(x):
         t = datetime.datetime.combine(x, datetime.time.min) + datetime.timedelta(hours=12)
         t_localized = time_zone.localize(t)

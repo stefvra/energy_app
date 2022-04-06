@@ -68,7 +68,6 @@ def test_faulty_reader_read(reader_param, reader_fixture):
         'mock_reader',
         'fronius_reader',
         'mock_SMA_reader',        
-        'SMA_Reader',
         'ow_reader',
         'mock_fronius_reader',
         'dsmr_reader_ten_messages_in_buffer',

@@ -432,9 +432,9 @@ class SMA_Reader(Reader):
 
     async def async_post(self, url, payload):
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=payload, verify=False, timeout=self.time_out) as response_fut:
-                response = await response_fut
-        return response
+            async with session.post(url, data=payload, timeout=self.time_out[1]) as response_fut:
+                response_text = await response_fut.text()
+        return response_text
 
 
     def get_login_data(self):
@@ -460,16 +460,17 @@ class SMA_Reader(Reader):
         Returns:
             DataFrame: DataFrame that is read from the server. localize to reader timezone
         """
-        #try:
-        request_time = datetime.datetime.now(self.timezone)
-        login_response = self.post(*self.get_login_data())
-        sid = login_response.json()['result']['sid']
-        query_response = self.post(*self.get_query_data(sid))
-        response_time = datetime.datetime.now(self.timezone)
-        self.post(*self.get_logout_data(sid))
-        df = self._log_to_df(query_response.text, request_time, response_time)
-        return df
-
+        try:
+            request_time = datetime.datetime.now(self.timezone)
+            login_response = self.post(*self.get_login_data())
+            sid = login_response.json()['result']['sid']
+            query_response = self.post(*self.get_query_data(sid))
+            response_time = datetime.datetime.now(self.timezone)
+            self.post(*self.get_logout_data(sid))
+            df = self._log_to_df(query_response.text, request_time, response_time)
+            return df
+        except:
+            return None
 
 
     async def _async_read(self):
@@ -479,16 +480,17 @@ class SMA_Reader(Reader):
         Returns:
             DataFrame: DataFrame that is read from the server
         """
-        try:
-            request_time = datetime.datetime.now(self.timezone)
-            sid = await self.post(*self.get_login_data()).json()['sid']
-            response = await self.post(self.get_query_data(sid)).json()
-            response_time = datetime.datetime.now(self.timezone)
-            await self.post(self.get_logout_data(sid))
-            df = self._log_to_df(response.text, request_time, response_time)
-            return df
-        except:
-            return None
+        #try:
+        request_time = datetime.datetime.now(self.timezone)
+        login_response_text = await self.async_post(*self.get_login_data())
+        sid = json.loads(login_response_text)['result']['sid']
+        query_response_text = await self.async_post(*self.get_query_data(sid))
+        response_time = datetime.datetime.now(self.timezone)
+        await self.async_post(*self.get_logout_data(sid))
+        df = self._log_to_df(query_response_text, request_time, response_time)
+        return df
+        #except:
+        #    return None
 
 
     def result_to_dict(self, result):
