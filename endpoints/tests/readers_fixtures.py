@@ -94,6 +94,9 @@ def reader_fixture(httpserver):
                 reader = Mock_Reader()
             elif tag == 'fronius_reader':
                 reader = self.reader_factory.create_from_config(config_store, 'fronius_reader')
+            elif tag == 'SMA_reader':
+                secret_config_store = tools.Config_Store(filename=tools.get_secret_config_file())
+                reader = self.reader_factory.create_from_config(secret_config_store, 'sma_reader')                
             elif tag == 'faulty_fronius_reader':
                 reader = self.reader_factory.create_from_config(config_store, 'faulty_fronius_reader')
             elif tag == 'mock_fronius_reader':
@@ -105,8 +108,6 @@ def reader_fixture(httpserver):
                 emulator = SMA_Emulator(pwd)
                 query_string = f'sid={emulator.get_sid()}'
                 logon_json = "{\"right\":\"usr\",\"pass\":\"" + pwd + "\"}"
-                #httpserver.expect_request("/dyn/login1.json", method='GET').respond_with_json({"foo": "bar"})
-                #httpserver.expect_request("/dyn/login.json", method='GET').respond_with_handler(emulator.default_request_handler())
                 httpserver.expect_request("/dyn/login.json", method='POST', data=logon_json).respond_with_handler(emulator.login_request_handler())
                 httpserver.expect_request("/dyn/logout.json", query_string=query_string, method='POST').respond_with_handler(emulator.logout_request_handler())
                 httpserver.expect_request("/dyn/getValues.json", query_string=query_string, method='POST').respond_with_handler(emulator.getvalues_request_handler())

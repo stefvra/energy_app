@@ -422,7 +422,8 @@ class SMA_Reader(Reader):
         query_keys = []
         for item in self.config:
             if item['required'] == 'mandatory' or item['active'] == True:
-                query_keys.append(item['key'])
+                if item['key'] is not None:
+                    query_keys.append(item['key'])
         return query_keys
 
 
@@ -450,7 +451,7 @@ class SMA_Reader(Reader):
 
     def get_query_data(self, sid):
         url = self.ip + "/dyn/getValues.json?sid=" + sid
-        payload = {"destDev": [], "keys ": self.get_query_keys() }
+        payload = json.dumps({"destDev": [], "keys": self.get_query_keys()})
         return url, payload
 
     def _read(self):
@@ -466,11 +467,12 @@ class SMA_Reader(Reader):
             sid = login_response.json()['result']['sid']
             query_response = self.post(*self.get_query_data(sid))
             response_time = datetime.datetime.now(self.timezone)
-            self.post(*self.get_logout_data(sid))
             df = self._log_to_df(query_response.text, request_time, response_time)
             return df
         except:
             return None
+        finally:
+            self.post(*self.get_logout_data(sid))
 
 
     async def _async_read(self):
@@ -480,25 +482,25 @@ class SMA_Reader(Reader):
         Returns:
             DataFrame: DataFrame that is read from the server
         """
-        #try:
-        request_time = datetime.datetime.now(self.timezone)
-        login_response_text = await self.async_post(*self.get_login_data())
-        sid = json.loads(login_response_text)['result']['sid']
-        query_response_text = await self.async_post(*self.get_query_data(sid))
-        response_time = datetime.datetime.now(self.timezone)
-        await self.async_post(*self.get_logout_data(sid))
-        df = self._log_to_df(query_response_text, request_time, response_time)
-        return df
-        #except:
-        #    return None
-
+        try:
+            request_time = datetime.datetime.now(self.timezone)
+            login_response_text = await self.async_post(*self.get_login_data())
+            sid = json.loads(login_response_text)['result']['sid']
+            query_response_text = await self.async_post(*self.get_query_data(sid))
+            response_time = datetime.datetime.now(self.timezone)
+            df = self._log_to_df(query_response_text, request_time, response_time)
+            return df
+        except:
+            return None
+        finally:
+            await self.async_post(*self.get_logout_data(sid))
 
     def result_to_dict(self, result):
         d = {}
         keys = {c['key']: c['tag'] for c in self.config}
         temp_dict = list(result.values())[0]
-        temp_dict = list(temp_dict.values())[0]
-        for key, value in temp_dict.items():
+        temp_dict1 = list(temp_dict.values())[0]
+        for key, value in temp_dict1.items():
             if key in keys:
                 d[keys[key]] = value['1'][0]['val']
         return d
