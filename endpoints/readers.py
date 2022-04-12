@@ -431,7 +431,7 @@ class SMA_Reader(Reader):
         response = requests.post(url, data=payload, verify=False, timeout=self.time_out)
         return response
 
-    async def async_post(self, url, payload):
+    async def async_post_to_text(self, url, payload):
         async with aiohttp.ClientSession() as session:
             async with session.post(url, data=payload, timeout=self.time_out[1]) as response_fut:
                 response_text = await response_fut.text()
@@ -461,6 +461,7 @@ class SMA_Reader(Reader):
         Returns:
             DataFrame: DataFrame that is read from the server. localize to reader timezone
         """
+        sid = ''
         try:
             request_time = datetime.datetime.now(self.timezone)
             login_response = self.post(*self.get_login_data())
@@ -482,18 +483,25 @@ class SMA_Reader(Reader):
         Returns:
             DataFrame: DataFrame that is read from the server
         """
+        sid = ''
         try:
             request_time = datetime.datetime.now(self.timezone)
-            login_response_text = await self.async_post(*self.get_login_data())
+            login_response_text = await self.async_post_to_text(*self.get_login_data())
+            logger.debug(f'login response: {login_response_text}')
             sid = json.loads(login_response_text)['result']['sid']
-            query_response_text = await self.async_post(*self.get_query_data(sid))
+            logger.debug(f'login sid: {login_response_text}')
+            query_response_text = await self.async_post_to_text(*self.get_query_data(sid))
+            logger.debug(f'query response: {query_response_text}')
             response_time = datetime.datetime.now(self.timezone)
             df = self._log_to_df(query_response_text, request_time, response_time)
+            logger.debug(f'converted dataframe: {df}')
             return df
-        except:
+        except Exception as e:
+            logger.debug(f'exception occured: {e}')
             return None
         finally:
-            await self.async_post(*self.get_logout_data(sid))
+            logout_response_text = await self.async_post_to_text(*self.get_logout_data(sid))
+            logger.debug(f'logout response: {logout_response_text}')
 
     def result_to_dict(self, result):
         d = {}
