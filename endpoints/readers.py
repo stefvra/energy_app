@@ -432,7 +432,7 @@ class SMA_Reader(Reader):
         return response
 
     async def async_post_to_text(self, url, payload):
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
             async with session.post(url, data=payload, timeout=self.time_out[1]) as response_fut:
                 response_text = await response_fut.text()
         return response_text
