@@ -432,8 +432,8 @@ class SMA_Reader(Reader):
         return response
 
     async def async_post_to_text(self, url, payload):
-        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
-            async with session.post(url, data=payload, timeout=self.time_out[1]) as response_fut:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, data=payload, timeout=self.time_out[1], ssl=False) as response_fut:
                 response_text = await response_fut.text()
         return response_text
 
@@ -510,7 +510,8 @@ class SMA_Reader(Reader):
         temp_dict1 = list(temp_dict.values())[0]
         for key, value in temp_dict1.items():
             if key in keys:
-                d[keys[key]] = value['1'][0]['val']
+                v = value['1'][0]['val']
+                d[keys[key]] = v
         return d
 
 
