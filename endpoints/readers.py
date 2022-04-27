@@ -19,6 +19,7 @@ from tools import tools
 
 # try to umport the Raspberry Pi reader classes
 # if not available create mock classes
+
 try:
     import busio
     import digitalio
@@ -433,6 +434,7 @@ class SMA_Reader(Reader):
 
     async def async_post_to_text(self, url, payload):
         async with aiohttp.ClientSession() as session:
+            # comment
             async with session.post(url, data=payload, timeout=self.time_out[1], ssl=False) as response_fut:
                 response_text = await response_fut.text()
         return response_text
