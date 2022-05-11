@@ -15,7 +15,6 @@ class Dashboard_Controller():
     def control_get(self, request):
         data = []
         for model, template in zip(self.models, self.templates):
-            
             if tools.get_app_state() == 'TESTING':
                 model_data = model.get(request)
                 model_data['template'] = template

@@ -171,9 +171,11 @@ class Log_Data_Model(Model):
 
     def merge_inputs(self, dfs):
         df = reduce(lambda left,right: pd.merge(left, right, how='outer', left_index=True, right_index=True), dfs)
+        df = df.select_dtypes(include='float64')
         try:
-            df.interpolate(inplace=True)
+            df.interpolate(method='index', inplace=True)
             df.fillna(method='bfill', inplace=True)
+            df.fillna(method='ffill', inplace=True)
             df.dropna(inplace=True)
         except:
             df = df.interpolate(method='bfill').interpolate(method='ffill')
