@@ -433,6 +433,9 @@ class SMA_Reader(Reader):
         return response
 
     async def async_post_to_text(self, url, payload):
+        # convert http to https if needed. was needed to connect to SMA invertor from rpi. not clear why
+        #if url[:5] == 'http:':
+        #    url = 'https:' + url[5:]
         async with aiohttp.ClientSession() as session:
             # comment
             async with session.post(url, data=payload, timeout=self.time_out[1], ssl=False) as response_fut:
