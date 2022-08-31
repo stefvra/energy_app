@@ -83,11 +83,13 @@ class Totals_Data_Model(Model):
             dsmr_stop = df_dsmr.sort_index().iloc[-1]
             from_grid_today = dsmr_stop['elec_used_t1'] + dsmr_stop['elec_used_t2'] - dsmr_start['elec_used_t1'] - dsmr_start['elec_used_t2']
             to_grid_today = dsmr_stop['elec_returned_t1'] + dsmr_stop['elec_returned_t2'] - dsmr_start['elec_returned_t1'] - dsmr_start['elec_returned_t2']
+            gas_used_today = (dsmr_stop['gas_used'] - dsmr_start['gas_used']) * 11.6
             today_actual_cost = self.cost_calculator.calculate(from_grid=from_grid_today, to_grid=to_grid_today)
             dsmr_last_updated = df_dsmr.index.to_pydatetime()[-1]
         else:
             from_grid_today = 'N/A'
             to_grid_today = 'N/A'
+            gas_used_today = 'N/A'
             today_actual_cost = 'N/A'
             dsmr_last_updated = 'N/A'
         
@@ -171,6 +173,17 @@ class Totals_Data_Model(Model):
             'unit': '€',
             'value': today_profit,
             'last_updated': pv_dsmr_last_updated
+            }
+        )
+
+        data.append(
+            {
+            'title': 'Gas Used',
+            'color': 'bg-primary',
+            'icon': 'fa-fire',
+            'unit': 'kWh',
+            'value': gas_used_today,
+            'last_updated': dsmr_last_updated
             }
         )
 

@@ -62,7 +62,7 @@ def datetime_to_str(time, format='%d-%m-%y %H:%M'):
 
 class Cost_Calculator():
     
-    def __init__(self, from_grid_cost=.3, to_grid_cost=-.03):
+    def __init__(self, from_grid_cost=.6, to_grid_cost=-.3):
         self.from_grid_cost = from_grid_cost
         self.to_grid_cost = to_grid_cost
 
