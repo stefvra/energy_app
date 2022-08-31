@@ -233,9 +233,9 @@ class Day_Totals_Model_Factory():
             'dsmr_store': {'type': 'string'}, 
             'activate': {'type': 'bool', 'default': True},
             'title': {'type': 'string', 'default': 'Day total'},
-            'elec_from_grid_kwh_cost': {'type': 'float', 'default': 0},
-            'elec_to_grid_kwh_cost': {'type': 'float', 'default': 0},
-            'gas_kwh_cost': {'type': 'float', 'default': 0}
+            'elec_from_grid_kwh_cost': {'type': 'numeric', 'default': 0},
+            'elec_to_grid_kwh_cost': {'type': 'numeric', 'default': 0},
+            'gas_kwh_cost': {'type': 'numeric', 'default': 0}
         }
 
     def create(self, dsmr_store, pv_store, title, elec_cost_calculator, gas_cost_calculator):
