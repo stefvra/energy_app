@@ -55,6 +55,16 @@ class Idle_Processor(Processor):
         return df
 
 
+class Scaled_Idle_Processor(Processor):
+
+    def __init__(self, factor):
+        self.factor = factor
+    
+    def process(self, df):
+        return df * self.factor
+
+
+
 
 class PV_Consumption_Processor(Processor):
 
@@ -119,7 +129,7 @@ class Gas_Consumption_Processor(Processor):
 
    
     def process(self, df):
-        s = df['gas_used']
+        s = df['gas_used'] * 11.6
         s.sort_index(inplace=True)
         s_diff = s.diff() / (s.index.to_series().diff().dt.total_seconds() / 3600)
         s_diff.dropna(inplace=True)

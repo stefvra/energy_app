@@ -62,7 +62,7 @@ def datetime_to_str(time, format='%d-%m-%y %H:%M'):
 
 class Elec_Cost_Calculator():
     
-    def __init__(self, from_grid_cost=.6, to_grid_cost=-.3):
+    def __init__(self, from_grid_cost, to_grid_cost):
         self.from_grid_cost = from_grid_cost
         self.to_grid_cost = to_grid_cost
 
@@ -72,7 +72,7 @@ class Elec_Cost_Calculator():
 
 class Gas_Cost_Calculator():
     
-    def __init__(self, kwh_cost=.12):
+    def __init__(self, kwh_cost):
         self.kwh_cost = kwh_cost
 
     def calculate(self, gas_used):

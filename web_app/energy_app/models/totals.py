@@ -89,7 +89,7 @@ class Totals_Data_Model(Model):
             gas_used_today_kwh = gas_used_today * 11.6
             today_actual_cost = self.elec_cost_calculator.calculate(from_grid=from_grid_today, to_grid=to_grid_today)
             dsmr_last_updated = df_dsmr.index.to_pydatetime()[-1]
-            gas_cost_today = self.gas_cost_calculator.calculate(gas_used_today)
+            gas_cost_today = self.gas_cost_calculator.calculate(gas_used_today_kwh)
         else:
             from_grid_today = 'N/A'
             to_grid_today = 'N/A'
@@ -100,15 +100,9 @@ class Totals_Data_Model(Model):
         
         if pv_data_available and dsmr_data_available:
             from_PV_to_consumers_today = from_PV_today - to_grid_today
-            today_cost_without_PV = self.cost_calculator.calculate(
-                from_grid=from_PV_today - to_grid_today + from_grid_today,
-                to_grid=0,
-            )
-            today_profit = today_cost_without_PV - today_actual_cost
             pv_dsmr_last_updated = max(PV_last_updated, dsmr_last_updated)
         else:
             from_PV_to_consumers_today = 'N/A'
-            today_profit = 'N/A'
             pv_dsmr_last_updated = 'N/A'
 
 

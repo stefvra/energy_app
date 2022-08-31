@@ -150,7 +150,7 @@ class Day_Graph_Model_Factory():
         elif params['processor'] == 'gas':
             processor = models.logs.Gas_Consumption_Processor()
             fields = ['gas_used']
-            unit = 'm³/h'
+            unit = 'kW'
         else:
             processor = models.logs.Idle_Processor()
             fields = params['fields']
@@ -213,9 +213,9 @@ class Totals_Graph_Model_Factory():
             fields = ['from_PV_cum', 'to_grid_cum', 'from_grid_cum']
             unit = 'kWh'
         elif params['processor'] == 'gas':
-            processor = models.logs.Idle_Processor()
+            processor = models.logs.Scaled_Idle_Processor(11.2)
             fields = ['gas_used']
-            unit = 'm³'
+            unit = 'kWh'
 
         return self.create(_stores, fields, unit, params['title'], processor)
 
@@ -255,10 +255,10 @@ class Day_Totals_Model_Factory():
         dsmr_store = stores.Store_Factory().create_from_config(config_store, params['dsmr_store'])
         pv_store = stores.Store_Factory().create_from_config(config_store, params['pv_store'])
         elec_cost_calculator = web_app_tools.Elec_Cost_Calculator(
-            from_grid_cost=params['elec_from_grid_kwh_cost'],
-            to_grid_cost=params['elec_to_grid_kwh_cost']
+            params['elec_from_grid_kwh_cost'],
+            params['elec_to_grid_kwh_cost']
             )
-        gas_cost_calculator = web_app_tools.Gas_Cost_Calculator(kwh_cost=params['gas_kwh_cost'])
+        gas_cost_calculator = web_app_tools.Gas_Cost_Calculator(params['gas_kwh_cost'])
 
 
 
@@ -277,11 +277,14 @@ class Totals_Model_Factory():
             'dsmr_store': {'type': 'string'}, 
             'activate': {'type': 'bool', 'default': True},
             'ref_date': {'type': 'datetime', 'default': ''},
-            'title': {'type': 'string', 'default': 'Totals'}            
+            'title': {'type': 'string', 'default': 'Totals'},
+            'elec_from_grid_kwh_cost': {'type': 'numeric', 'default': 0},
+            'elec_to_grid_kwh_cost': {'type': 'numeric', 'default': 0},
+            'gas_kwh_cost': {'type': 'numeric', 'default': 0}                        
         }
 
-    def create(self, dsmr_store, pv_store, ref_date, title):
-        return models.totals.Totals_Data_Model(dsmr_store, pv_store, ref_date, title)
+    def create(self, dsmr_store, pv_store, ref_date, title, elec_cost_calculator, gas_cost_calculator):
+        return models.totals.Ref_Totals_Data_Model(dsmr_store, pv_store, ref_date, title, elec_cost_calculator, gas_cost_calculator)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -297,10 +300,15 @@ class Totals_Model_Factory():
 
         dsmr_store = stores.Store_Factory().create_from_config(config_store, params['dsmr_store'])
         pv_store = stores.Store_Factory().create_from_config(config_store, params['pv_store'])
+        elec_cost_calculator = web_app_tools.Elec_Cost_Calculator(
+            params['elec_from_grid_kwh_cost'],
+            params['elec_to_grid_kwh_cost']
+            )
+        gas_cost_calculator = web_app_tools.Gas_Cost_Calculator(params['gas_kwh_cost'])        
         if store_register is not None:
             dsmr_store = store_register.register(dsmr_store)
             pv_store = store_register.register(pv_store)
-        return self.create(dsmr_store, pv_store, params['ref_date'], params['title'])
+        return self.create(dsmr_store, pv_store, params['ref_date'], params['title'], elec_cost_calculator, gas_cost_calculator)
 
 
 class Date_Buttons_Model_Factory():
