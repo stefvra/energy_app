@@ -15,7 +15,9 @@ logger = logging.getLogger('web_app_moddels')
 
 class Totals_Data_Model(Model):
 
-    def __init__(self, title):
+    def __init__(self, title, elec_cost_calculator, gas_cost_calculator):
+        self.elec_cost_calculator = elec_cost_calculator
+        self.gas_cost_calculator = gas_cost_calculator
         super().__init__(title)
 
 
@@ -83,10 +85,11 @@ class Totals_Data_Model(Model):
             dsmr_stop = df_dsmr.sort_index().iloc[-1]
             from_grid_today = dsmr_stop['elec_used_t1'] + dsmr_stop['elec_used_t2'] - dsmr_start['elec_used_t1'] - dsmr_start['elec_used_t2']
             to_grid_today = dsmr_stop['elec_returned_t1'] + dsmr_stop['elec_returned_t2'] - dsmr_start['elec_returned_t1'] - dsmr_start['elec_returned_t2']
-            gas_used_today = (dsmr_stop['gas_used'] - dsmr_start['gas_used']) * 11.6
-            today_actual_cost = self.cost_calculator.calculate(from_grid=from_grid_today, to_grid=to_grid_today)
+            gas_used_today = (dsmr_stop['gas_used'] - dsmr_start['gas_used'])
+            gas_used_today_kwh = gas_used_today * 11.6
+            today_actual_cost = self.elec_cost_calculator.calculate(from_grid=from_grid_today, to_grid=to_grid_today)
             dsmr_last_updated = df_dsmr.index.to_pydatetime()[-1]
-            gas_cost_today = gas_used_today * .12
+            gas_cost_today = self.gas_cost_calculator.calculate(gas_used_today)
         else:
             from_grid_today = 'N/A'
             to_grid_today = 'N/A'
@@ -163,7 +166,7 @@ class Totals_Data_Model(Model):
             'color': 'bg-warning',
             'icon': 'fa-fire',
             'unit': 'kWh',
-            'value': gas_used_today,
+            'value': gas_used_today_kwh,
             'last_updated': dsmr_last_updated
             }
         )
@@ -217,11 +220,10 @@ class Totals_Data_Model(Model):
 
 class Day_Totals_Data_Model(Totals_Data_Model):
 
-    def __init__(self, dsmr_store, pv_store, title):
+    def __init__(self, dsmr_store, pv_store, title, elec_cost_calculator, gas_cost_calculator):
         self.dsmr_input = inputs.Store_Get_Day(dsmr_store)
         self.pv_input = inputs.Store_Get_Day(pv_store)
-        self.cost_calculator = web_app_tools.Cost_Calculator()
-        super().__init__(title)
+        super().__init__(title, elec_cost_calculator, gas_cost_calculator)
 
 
 
@@ -249,7 +251,7 @@ class Day_Totals_Data_Model(Totals_Data_Model):
 
 class Ref_Totals_Data_Model(Totals_Data_Model):
 
-    def __init__(self, dsmr_store, pv_store, ref_date, title):
+    def __init__(self, dsmr_store, pv_store, ref_date, title, elec_cost_calculator, gas_cost_calculator):
 
         self.ref_date = ref_date
 
@@ -259,10 +261,9 @@ class Ref_Totals_Data_Model(Totals_Data_Model):
         self.dsmr_input = inputs.Store_Get(dsmr_store)
         self.pv_input = inputs.Store_Get(pv_store)
 
-        self.cost_calculator = web_app_tools.Cost_Calculator()
         self.states = {}
 
-        super().__init__(title)
+        super().__init__(title, elec_cost_calculator, gas_cost_calculator)
 
 
 

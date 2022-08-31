@@ -4,6 +4,8 @@ import web_app.energy_app.models as models
 from endpoints import agent_clients, stores
 from services import inputs
 from tools import tools
+from tools import web_app_tools
+
 
 
 
@@ -230,11 +232,14 @@ class Day_Totals_Model_Factory():
             'pv_store': {'type': 'string'},
             'dsmr_store': {'type': 'string'}, 
             'activate': {'type': 'bool', 'default': True},
-            'title': {'type': 'string', 'default': 'Day total'}            
+            'title': {'type': 'string', 'default': 'Day total'},
+            'elec_from_grid_kwh_cost': {'type': 'float', 'default': 0},
+            'elec_to_grid_kwh_cost': {'type': 'float', 'default': 0},
+            'gas_kwh_cost': {'type': 'float', 'default': 0}
         }
 
-    def create(self, dsmr_store, pv_store, title):
-        return models.totals.Day_Totals_Data_Model(dsmr_store, pv_store, title)
+    def create(self, dsmr_store, pv_store, title, elec_cost_calculator, gas_cost_calculator):
+        return models.totals.Day_Totals_Data_Model(dsmr_store, pv_store, title, elec_cost_calculator, gas_cost_calculator)
     
 
     def create_from_config(self, config_store, section, store_register=None):
@@ -249,10 +254,18 @@ class Day_Totals_Model_Factory():
 
         dsmr_store = stores.Store_Factory().create_from_config(config_store, params['dsmr_store'])
         pv_store = stores.Store_Factory().create_from_config(config_store, params['pv_store'])
+        elec_cost_calculator = web_app_tools.Elec_Cost_Calculator(
+            from_grid_cost=params['elec_from_grid_kwh_cost'],
+            to_grid_cost=params['elec_to_grid_kwh_cost']
+            )
+        gas_cost_calculator = web_app_tools.Gas_Cost_Calculator(kwh_cost=params['gas_kwh_cost'])
+
+
+
         if store_register is not None:
             dsmr_store = store_register.register(dsmr_store)
             pv_store = store_register.register(pv_store)
-        return self.create(dsmr_store, pv_store, params['title'])
+        return self.create(dsmr_store, pv_store, params['title'], elec_cost_calculator, gas_cost_calculator)
 
 
 class Totals_Model_Factory():
