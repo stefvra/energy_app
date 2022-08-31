@@ -86,11 +86,13 @@ class Totals_Data_Model(Model):
             gas_used_today = (dsmr_stop['gas_used'] - dsmr_start['gas_used']) * 11.6
             today_actual_cost = self.cost_calculator.calculate(from_grid=from_grid_today, to_grid=to_grid_today)
             dsmr_last_updated = df_dsmr.index.to_pydatetime()[-1]
+            gas_cost_today = gas_used_today * .12
         else:
             from_grid_today = 'N/A'
             to_grid_today = 'N/A'
             gas_used_today = 'N/A'
             today_actual_cost = 'N/A'
+            gas_cost_today = 'N/A'
             dsmr_last_updated = 'N/A'
         
         if pv_data_available and dsmr_data_available:
@@ -154,9 +156,21 @@ class Totals_Data_Model(Model):
             }
         )
 
+
         data.append(
             {
-            'title': 'Cost',
+            'title': 'Gas Used',
+            'color': 'bg-warning',
+            'icon': 'fa-fire',
+            'unit': 'kWh',
+            'value': gas_used_today,
+            'last_updated': dsmr_last_updated
+            }
+        )
+
+        data.append(
+            {
+            'title': 'Electricity Cost',
             'color': 'bg-secondary',
             'icon': 'fa-eur',
             'unit': '€',
@@ -165,6 +179,7 @@ class Totals_Data_Model(Model):
             }
         )
 
+        """
         data.append(
             {
             'title': 'Profit',
@@ -175,17 +190,19 @@ class Totals_Data_Model(Model):
             'last_updated': pv_dsmr_last_updated
             }
         )
+        """
 
         data.append(
             {
-            'title': 'Gas Used',
+            'title': 'Gas Cost',
             'color': 'bg-primary',
-            'icon': 'fa-fire',
-            'unit': 'kWh',
-            'value': gas_used_today,
+            'icon': 'fa-eur',
+            'unit': '€',
+            'value': gas_cost_today,
             'last_updated': dsmr_last_updated
             }
         )
+
 
         results = {'data': data}
         results['title'] = self.title
