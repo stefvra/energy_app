@@ -195,7 +195,7 @@ class Totals_Data_Model(Model):
         data.append(
             {
             'title': 'Gas Cost',
-            'color': 'bg-primary',
+            'color': 'bg-secondary',
             'icon': 'fa-eur',
             'unit': '€',
             'value': gas_cost_today,
