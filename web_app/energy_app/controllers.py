@@ -19,7 +19,6 @@ class Dashboard_Controller():
                 model_data = model.get(request)
                 model_data['template'] = template
             else:
-                model_data = model.get(request)
                 try:
                     model_data = model.get(request)
                     model_data['template'] = template
