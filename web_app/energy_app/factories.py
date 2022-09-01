@@ -171,7 +171,10 @@ class Totals_Graph_Model_Factory():
             'title': {'type': 'string', 'default': 'Day Graph'},
             'processor': {'type': 'string', 'default': 'field_picker'},
             'fields': {'type': 'string_list', 'default': ''},
-            'unit': {'type': 'string', 'default': ''}            
+            'unit': {'type': 'string', 'default': ''},
+            'elec_from_grid_kwh_cost': {'type': 'numeric', 'default': 0},
+            'elec_to_grid_kwh_cost': {'type': 'numeric', 'default': 0},
+            'gas_kwh_cost': {'type': 'numeric', 'default': 0}                
         }
 
     def create(self, _stores, fields, unit, title, processor):
@@ -208,10 +211,21 @@ class Totals_Graph_Model_Factory():
             _stores.append(store)
 
 
+        elec_cost_calculator = web_app_tools.Elec_Cost_Calculator(
+            params['elec_from_grid_kwh_cost'],
+            params['elec_to_grid_kwh_cost']
+            )
+        gas_cost_calculator = web_app_tools.Gas_Cost_Calculator(params['gas_kwh_cost'])        
+
+
         if params['processor'] == 'elec':
             processor = models.logs.Totals_PV_Consumption_Processor()
             fields = ['from_PV_cum', 'to_grid_cum', 'from_grid_cum']
             unit = 'kWh'
+        elif params['processor'] == 'cost':
+            processor = models.logs.Cost_Processor(elec_cost_calculator, gas_cost_calculator)
+            fields = ['elec_cost', 'gas_cost']
+            unit = '€'
         elif params['processor'] == 'gas':
             processor = models.logs.Scaled_Idle_Processor(11.2)
             fields = ['gas_used']

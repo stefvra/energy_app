@@ -239,6 +239,11 @@ class Day_Totals_Data_Model(Totals_Data_Model):
         return _inputs
 
 
+    def complete_result(self, request, result):
+        result['title'] = f'Totals for today'
+        return result
+
+
 
 
 
@@ -264,7 +269,6 @@ class Ref_Totals_Data_Model(Totals_Data_Model):
     def get_inputs(self, request):
 
         ref_start_time = datetime.datetime.combine(self.ref_date, datetime.time.min)
-        #ref_start_time = local_timezone.localize(ref_start_time)
         ref_stop_time = ref_start_time + datetime.timedelta(hours=1)
 
 
@@ -288,4 +292,6 @@ class Ref_Totals_Data_Model(Totals_Data_Model):
         return _inputs
 
 
-
+    def complete_result(self, request, result):
+        result['title'] = f'Totals since {self.ref_date}'
+        return result

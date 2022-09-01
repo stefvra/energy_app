@@ -138,7 +138,39 @@ class Gas_Consumption_Processor(Processor):
 
 
 
+class Cost_Processor(Processor):
 
+    def __init__(self, elec_cost_calculator, gas_cost_calculator):
+        self.gas_cost_calculator = gas_cost_calculator
+        self.elec_cost_calculator = elec_cost_calculator
+
+
+    def process(self, df):
+
+
+        df.rename(columns = {
+            'actual_elec_used': 'from_grid',
+            'actual_elec_returned': 'to_grid',
+            },
+            inplace = True)
+
+
+        df['from_grid_cum'] = df['elec_used_t1'] + df['elec_used_t2']
+        df['to_grid_cum'] = df['elec_returned_t1'] + df['elec_returned_t2']
+        df['gas_used_kwh'] = df['gas_used'] * 11.6
+
+        df.drop(columns=['elec_used_t1', 'elec_used_t2', 'elec_returned_t1', 'elec_returned_t2',
+            'actual_tariff'], inplace=True)
+
+
+        df['elec_cost'] = self.elec_cost_calculator.calculate(from_grid=df['from_grid_cum'], to_grid=df['to_grid_cum'])
+        df['gas_cost'] = self.gas_cost_calculator.calculate(df['gas_used_kwh'])
+
+        df = df[['elec_cost', 'gas_cost']]
+
+
+
+        return df
 
 
 
