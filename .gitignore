@@ -12,6 +12,7 @@ config/supervisord
 !config/general/SMA_measurements.json
 !config/logging
 *.DS_Store
+.venv
 
 
 

@@ -14,6 +14,8 @@ from functools import wraps
 from pymongo import MongoClient
 import pymongo
 import numpy as np
+from influxdb_client import InfluxDBClient, Point
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 from tools.factory_tools import Param_Parser
 
@@ -743,6 +745,158 @@ class Mongo_Store_Client(Store_Client):
 
 
 
+class Influx_Store_Client(Store_Client):
+
+
+    def __init__(self, client: InfluxDBClient, bucket: str, measurement: str):
+        """
+        Initialization
+
+        Args:
+            client (MongoClient): client to access MongoDb
+            index (str): name of index field
+            database (str): name of database
+            collection (str): name of collection
+        """
+        self.client = client
+        super().__init__("", bucket, measurement)
+
+    def __eq__(self, other: Store_Client) -> bool :
+        """
+        DUMMY IMPLEMENTATION, NEEDS UPDATE
+        Implementation of equality method
+
+        Args:
+            other (Store_Client): object to compare to
+
+        Returns:
+            bool: True if self is considered equal to other
+        """
+        return True
+
+
+    def get_bucket(self) -> str:
+        """
+        Get name of database
+
+        Returns:
+            str: name of database
+        """
+        return self.database
+
+    def get_measurement(self) -> str:
+        """
+        Get name of collection
+
+        Returns:
+            str: collection name
+        """
+        return self.file
+
+
+    def get_existing_files(self) -> list:
+        """
+        Get all files in the database
+
+        Returns:
+            list: list of database names
+        """
+        return self._get_existing_measurements()
+
+
+
+
+    def _generate_query(self, start: datetime.datetime = None, stop: datetime.datetime = None) -> str:
+        """
+        Generate filter based in start and stop time
+
+        Args:
+            start (datetime.datetime, optional): start time. Defaults to None.
+            stop (datetime.datetime, optional): stop time. Defaults to None.
+
+        Returns:
+            dict: representing filter
+        """
+
+        start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+        stop_str = stop.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        if (start == None and stop == None) or self.index == None:
+            filter = None
+        else:
+            if start == None:
+                range = f'stop: {stop_str}'
+            elif stop == None:
+                range = f'start: {start_str}'
+            else:
+                range = f'start: {start_str}, stop: {stop_str}'
+            filter = f'''from(bucket:"{self.get_bucket()}")
+                        |> range({range})    
+                        |> filter(fn: (r) => r["_measurement"] == "{self.get_measurement()}")
+                        '''
+
+        return filter
+
+
+    def _get_existing_measurements(self) -> list:
+        """
+        DUMMY IMPLEMENTATION
+        Get names of existing collections
+
+        Returns:
+            list: names of collections
+        """
+        return [self.get_measurement()]
+
+
+   
+    def put(self, records):
+        records = self.parser.parse_records_to_store(records)
+        write_api = self.client.write_api(write_options=SYNCHRONOUS)
+        write_api.write(bucket=self.get_bucket(), record=records, data_frame_measurement_name=self.get_measurement())
+    
+
+    def get(self, start, stop):
+        query = self._generate_query(start=start, stop=stop)
+        query_api = self.client.query_api()
+        df = query_api.query_data_frame(query)
+        return self.parser.parse_records_from_store(df)
+
+
+    def get_all(self):
+        stop = datetime.now()
+        start = stop - datetime.timedelta(years=10)
+        return self.get(start=start, stop=stop)
+
+
+    def remove(self, start, stop):
+        pass
+    
+    
+    def delete_files(self):
+        pass
+
+
+
+    def get_first(self):
+        stop = datetime.now()
+        start = stop - datetime.timedelta(years=10)
+        query = self._generate_query(start=start, stop=stop)
+        query = query + "|> first()"
+        query_api = self.client.query_api()
+        df = query_api.query_data_frame(query)
+
+    def get_last(self):
+        stop = datetime.now()
+        start = stop - datetime.timedelta(years=10)
+        query = self._generate_query(start=start, stop=stop)
+        query = query + "|> last()"
+        query_api = self.client.query_api()
+        df = query_api.query_data_frame(query)
+
+
+
+
 class CSV_Store_Client(Store_Client):
 
     def __init__(self, index, directory, filename):
@@ -1435,6 +1589,21 @@ class Transformer():
 
 
 
+class UnitTransformer():
+
+    def __init__(self):
+        pass
+
+    def __eq__(self, other):
+        return True
+
+    def to_records(self, df):
+        return df
+
+    def to_df(self, records, index_field):
+        return records
+
+
 class Record_Parser(ABC):
 
     def __init__(self):
@@ -1491,7 +1660,25 @@ class Record_Parser(ABC):
 
 
 
+class Influx_Record_Parser(Record_Parser):
 
+    def __init__(self):
+        pass
+
+    def __eq__(self, other):
+        return True
+
+    def parse_records_to_store(self, records):
+        return records
+
+    def parse_records_from_store(self, records):
+        return records
+
+    def parse_value_to_store(self, value):
+        return value
+
+    def parse_value_from_store(self, value):
+        return value
 
 
 
@@ -1732,6 +1919,8 @@ class Store_Factory(Store_Factory_Mixin):
             return CSV_Store_Factory().create_from_config(config_store, section)
         elif params['type'] == 'zero':
             return Zero_Store_Factory().create_from_config(config_store, section)
+        elif params['type'] == 'INFLUXDB':
+            return Influx_Store_Factory().create_from_config(config_store, section)            
         else:
             pass
 
@@ -1836,6 +2025,36 @@ class Mongo_Store_Factory(Store_Factory_Mixin):
             decorators.append(self.decimal_distributed_decorator(params['index']))
         return self.create(client, Transformer(), decorators=decorators)
 
+
+
+class Influx_Store_Factory(Store_Factory_Mixin):
+
+    def __init__(self):
+        self.param_parser = Param_Parser()
+        self.param_register = {
+            'url': {'type': 'string'},
+            'bucket': {'type': 'string'},
+            'organization': {'type': 'string'},
+            'token': {'type': 'string'},
+            'measurement': {'type': 'string'},
+        }
+
+   
+
+    def create_from_config(self, config_store, section):
+
+        params = config_store.get(section)
+        params = self.param_parser.add_defaults(params, self.param_register)
+        self.param_parser.check_types(params, self.param_register)
+
+        influxclient = InfluxDBClient(
+            url=params['url'],
+            token=params['token'],
+            org=params['organization']
+            )
+        client = Mongo_Store_Client(influxclient, params['bucket'], params['measurement'])
+        decorators = []
+        return self.create(client, UnitTransformer(), decorators=decorators)
 
 
 
