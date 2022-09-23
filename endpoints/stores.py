@@ -95,7 +95,7 @@ class Store_Manager():
         """
 
         records = self.transformer.to_records(df)
-        if self.store_client._check_record_form(records[0]):
+        if self.store_client._check_record_form(records):
             self.buffer.put(records, block=False)
         else:
             raise Exception
@@ -254,7 +254,7 @@ class Store_Client(ABC):
         return [records[smallest_index]]
 
 
-    def _check_record_form(self, record_to_check: dict) -> bool:
+    def _check_record_form(self, records_to_check) -> bool:
         """
         Check if form of record corresponds to store. Types, fields and
         index are checked.
@@ -271,7 +271,7 @@ class Store_Client(ABC):
         except:
             return True
         form_is_equal = True
-        for i1, i2 in zip(existing_record.items(), record_to_check.items()):
+        for i1, i2 in zip(existing_record.items(), records_to_check[0].items()):
             key1 = i1[0]
             key2 = i2[0]
             type1 = type(i1[1])
@@ -759,6 +759,7 @@ class Influx_Store_Client(Store_Client):
             collection (str): name of collection
         """
         self.client = client
+        self.parser = Influx_Record_Parser()
         super().__init__("", bucket, measurement)
 
     def __eq__(self, other: Store_Client) -> bool :
@@ -772,6 +773,9 @@ class Influx_Store_Client(Store_Client):
         Returns:
             bool: True if self is considered equal to other
         """
+        return True
+
+    def _check_record_form(self, records_to_check):
         return True
 
 
@@ -2052,7 +2056,7 @@ class Influx_Store_Factory(Store_Factory_Mixin):
             token=params['token'],
             org=params['organization']
             )
-        client = Mongo_Store_Client(influxclient, params['bucket'], params['measurement'])
+        client = Influx_Store_Client(influxclient, params['bucket'], params['measurement'])
         decorators = []
         return self.create(client, UnitTransformer(), decorators=decorators)
 
