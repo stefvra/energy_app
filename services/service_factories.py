@@ -79,15 +79,19 @@ class Logger_Factory(Service_Factory):
         param_register = {
             'period': {'type': 'numeric'},
             'store': {'type': 'string'},
+            'store2': {'type': 'string', 'default': 'na'},
             'reader': {'type': 'string'}                    
         }
         super().__init__(param_register=param_register)
 
-    def create(self, event, reader, store, strategy, connection_handler_strategy=None):
-        if hasattr(store, 'time_field'):
-            store.time_field = reader.time_field
+    def create(self, event, reader, stores, strategy, connection_handler_strategy=None):
+        _commands = []
+        for store in stores:
+            if hasattr(store, 'time_field'):
+                store.time_field = reader.time_field
+            _commands.append(commands.Store_Put_Command(store))
         _inputs = [inputs.Reader_Input(reader)]
-        _commands = [commands.Store_Put_Command(store)]
+
 
         _agents = []
         _agents.append(agents.Agent(_inputs, _commands, event, strategy, one_time_strategy=connection_handler_strategy))
@@ -106,7 +110,9 @@ class Logger_Factory(Service_Factory):
         if self.is_not_activated(params):
             return None
 
-        store = stores.Store_Factory().create_from_config(config_store, params['store'])
+        store = [stores.Store_Factory().create_from_config(config_store, params['store'])]
+        if params['store2'] != 'na':
+            store.append(stores.Store_Factory().create_from_config(config_store, params['store2']))
         reader = readers.Reader_Factory().create_from_config(config_store, params['reader'])
         event = events.Periodic_Event(loop_period=params['period'])
         strategy = basic_strategies.Log_Strategy()
