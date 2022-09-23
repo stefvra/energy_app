@@ -57,7 +57,8 @@ class Log_Strategy(Strategy):
     async def _execute(self, inputs, commands):
         df = await inputs[0].get_async()
         if df is not None:
-            await commands[0].execute(df)
+            for command in commands:
+                await command.execute(df)
             self.states['records_logged'] += df.shape[0]
         
 
