@@ -26,8 +26,7 @@ class MQTT_Endpoint():
         print(f"executing MQTT put")
         print("*"*250)
 
-        df.reset_index(inplace=True)
-        df = df.rename(columns = {'index':'time'})
+        df.reset_index(inplace=True, names="time")
         df_json = df.to_json(orient="records")
         self.client.publish(self.topic, payload=df_json)
 
