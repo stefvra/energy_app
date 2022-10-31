@@ -9,6 +9,7 @@ import services.strategies.data_managers as data_managers
 import services.strategies.basic as basic_strategies
 import services.strategies.connection_handlers as connection_handlers
 import endpoints.stores as stores
+import endpoints.mqtt as mqtt
 import endpoints.readers as readers
 import endpoints.outputs as outputs
 from tools import tools
@@ -80,6 +81,7 @@ class Logger_Factory(Service_Factory):
             'period': {'type': 'numeric'},
             'store': {'type': 'string'},
             'store2': {'type': 'string', 'default': 'na'},
+            'mqtt_service': {'type': 'string', 'default': 'na'},            
             'reader': {'type': 'string'}                    
         }
         super().__init__(param_register=param_register)
@@ -113,6 +115,8 @@ class Logger_Factory(Service_Factory):
         store = [stores.Store_Factory().create_from_config(config_store, params['store'])]
         if params['store2'] != 'na':
             store.append(stores.Store_Factory().create_from_config(config_store, params['store2']))
+        if params['mqtt_service'] != 'na':
+            store.append(mqtt.MQTT_Endpoint_factory().create_from_config(config_store, params['mqtt_service']))
         reader = readers.Reader_Factory().create_from_config(config_store, params['reader'])
         event = events.Periodic_Event(loop_period=params['period'])
         strategy = basic_strategies.Log_Strategy()
