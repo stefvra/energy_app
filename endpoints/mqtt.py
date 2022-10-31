@@ -22,6 +22,10 @@ class MQTT_Endpoint():
 
     def put(self, df):
 
+        print("*"*250)
+        print(f"executing MQTT put")
+        print("*"*250)
+
         df.reset_index(inplace=True)
         df = df.rename(columns = {'index':'time'})
         df_json = df.to_json(orient="records")
