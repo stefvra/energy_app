@@ -71,7 +71,7 @@ class MQTT_Endpoint_factory():
             'user': {'type': 'string'},
             'pwd': {'type': 'string'},
             'port': {'type': 'int'},
-            'topic': {'type': 'int'},
+            'topic': {'type': 'string'},
         }
 
 
