@@ -283,8 +283,6 @@ class Fronius_Reader(HttpReader):
         return df
 
 
-
-
 class OW_Reader(HttpReader):
     """
         Reader for open weather service

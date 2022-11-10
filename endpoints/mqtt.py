@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
 import paho.mqtt.client as mqtt_client
 from tools.factory_tools import Param_Parser
+import logging
 
-
+logger = logging.getLogger('mqtt')
 
 class MQTT_Endpoint():
     
@@ -21,15 +22,13 @@ class MQTT_Endpoint():
 
 
     def put(self, df):
-
-        print("*"*250)
-        print(f"executing MQTT put")
-        print("*"*250)
-
+        logger.debug('starting put to mqtt')
         df.index.rename("time", inplace=True)
         df.reset_index(inplace=True)
         df_json = df.to_json(orient="records")
+        logger.debug(f'parsing to json done: {df_json}')
         self.client.publish(self.topic, payload=df_json)
+        logger.debug('message published')
 
 
     def get(self, start, stop):
