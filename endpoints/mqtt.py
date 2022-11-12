@@ -27,6 +27,7 @@ class MQTT_Endpoint():
         df.reset_index(inplace=True)
         df_json = df.to_json(orient="records")
         logger.debug(f'parsing to json done: {df_json}')
+        self.client.reconnect()
         self.client.publish(self.topic, payload=df_json)
         logger.debug('message published')
 
