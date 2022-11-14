@@ -23,6 +23,7 @@ class MQTT_Endpoint():
 
     def put(self, df):
         logger.debug('starting put to mqtt')
+        df = df.select_dtypes(include='number')
         df.index.rename("time", inplace=True)
         df.reset_index(inplace=True)
         df_json = df.to_json(orient="records")
