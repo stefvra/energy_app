@@ -70,7 +70,7 @@ class MQTT_Endpoint_factory():
         self.param_register = {
             'server': {'type': 'string'},
             'user': {'type': 'string'},
-            'pwd': {'type': 'string'},
+            'pwd': {'type': 'string', 'default': ""},
             'port': {'type': 'int'},
             'topic': {'type': 'string'},
         }

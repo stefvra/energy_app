@@ -3,7 +3,6 @@ from tools.factory_tools import Param_Parser
 
 logger = logging.getLogger('outputs')
 
-
 # try to import Raspberry PI GPIO library. If not possible (eg for testing)
 # a mock will be loaded
 try:
