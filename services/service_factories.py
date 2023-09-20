@@ -79,7 +79,7 @@ class Logger_Factory(Service_Factory):
     def __init__(self):
         param_register = {
             'period': {'type': 'numeric'},
-            'store': {'type': 'string'},
+            'store': {'type': 'string', 'default': 'na'},
             'store2': {'type': 'string', 'default': 'na'},
             'mqtt_service': {'type': 'string', 'default': 'na'},            
             'reader': {'type': 'string'}                    
@@ -112,17 +112,19 @@ class Logger_Factory(Service_Factory):
         if self.is_not_activated(params):
             return None
 
-        store = [stores.Store_Factory().create_from_config(config_store, params['store'])]
+        stores = []
+        if params['store'] != 'na':
+            stores.append(stores.Store_Factory().create_from_config(config_store, params['store']))
         if params['store2'] != 'na':
-            store.append(stores.Store_Factory().create_from_config(config_store, params['store2']))
+            stores.append(stores.Store_Factory().create_from_config(config_store, params['store2']))
         if params['mqtt_service'] != 'na':
-            store.append(mqtt.MQTT_Endpoint_factory().create_from_config(config_store, params['mqtt_service']))
+            stores.append(mqtt.MQTT_Endpoint_factory().create_from_config(config_store, params['mqtt_service']))
         reader = readers.Reader_Factory().create_from_config(config_store, params['reader'])
         event = events.Periodic_Event(loop_period=params['period'])
         strategy = basic_strategies.Log_Strategy()
         connection_handler_strategy = self.get_connection_handler_strategy(params, strategy)
 
-        return self.create(event, reader, store, strategy, connection_handler_strategy=connection_handler_strategy)
+        return self.create(event, reader, stores, strategy, connection_handler_strategy=connection_handler_strategy)
 
 
 
