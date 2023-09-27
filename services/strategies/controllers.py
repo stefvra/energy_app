@@ -62,7 +62,6 @@ class Control_Strategy(basic.Strategy):
 
         # process input data
         excess_power = (df_dsmr['actual_elec_returned'] - df_dsmr['actual_elec_used']).mean() * 1000
-        last_recorded_time = df_dsmr['system_time'].iloc[-1]
         excess_power += self.states['charging'] * self.config['charging_power']
         self.states['excess_power'] = excess_power
 
