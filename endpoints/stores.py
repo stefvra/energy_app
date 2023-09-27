@@ -748,7 +748,7 @@ class Mongo_Store_Client(Store_Client):
 class Influx_Store_Client(Store_Client):
 
 
-    def __init__(self, client: InfluxDBClient, bucket: str, measurement: str):
+    def __init__(self, client: InfluxDBClient, index: str, bucket: str, measurement: str):
         """
         Initialization
 
@@ -760,7 +760,8 @@ class Influx_Store_Client(Store_Client):
         """
         self.client = client
         self.parser = Influx_Record_Parser()
-        super().__init__("", bucket, measurement)
+        super().__init__(index, bucket, measurement)
+
 
     def __eq__(self, other: Store_Client) -> bool :
         """
@@ -822,8 +823,12 @@ class Influx_Store_Client(Store_Client):
             dict: representing filter
         """
 
-        start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
-        stop_str = stop.strftime("%Y-%m-%dT%H:%M:%SZ")
+        # issues with timezone patched with adding to time queries
+        
+        start_corrected = start - datetime.timedelta(hours=2)
+        stop_corrected = stop - datetime.timedelta(hours=2)
+        start_str = start_corrected.strftime("%Y-%m-%dT%H:%M:%SZ")
+        stop_str = stop_corrected.astimezone().strftime("%Y-%m-%dT%H:%M:%SZ")
 
         if (start == None and stop == None) or self.index == None:
             filter = None
@@ -837,6 +842,8 @@ class Influx_Store_Client(Store_Client):
             filter = f'''from(bucket:"{self.get_bucket()}")
                         |> range({range})    
                         |> filter(fn: (r) => r["_measurement"] == "{self.get_measurement()}")
+                        |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+                        |> drop(columns: ["_measurement", "result", "_start", "_stop", "host", "tag", "topic"])
                         '''
 
         return filter
@@ -864,7 +871,8 @@ class Influx_Store_Client(Store_Client):
         query = self._generate_query(start=start, stop=stop)
         query_api = self.client.query_api()
         df = query_api.query_data_frame(query)
-        return self.parser.parse_records_from_store(df)
+        records = df.to_dict('records')
+        return self.parser.parse_records_from_store(records)
 
 
     def get_all(self):
@@ -884,17 +892,17 @@ class Influx_Store_Client(Store_Client):
 
     def get_first(self):
         stop = datetime.now()
-        start = stop - datetime.timedelta(years=10)
+        start = stop - datetime.timedelta(weeks=1)
         query = self._generate_query(start=start, stop=stop)
-        query = query + "|> first()"
+        query = query + '|> first(column: "_time")'
         query_api = self.client.query_api()
         df = query_api.query_data_frame(query)
 
     def get_last(self):
-        stop = datetime.now()
-        start = stop - datetime.timedelta(years=10)
+        stop = datetime.datetime.now()
+        start = stop - datetime.timedelta(weeks=1)
         query = self._generate_query(start=start, stop=stop)
-        query = query + "|> last()"
+        query = query + '|> last(column: "_time")'
         query_api = self.client.query_api()
         df = query_api.query_data_frame(query)
 
@@ -2037,6 +2045,7 @@ class Influx_Store_Factory(Store_Factory_Mixin):
         self.param_parser = Param_Parser()
         self.param_register = {
             'url': {'type': 'string'},
+            'index': {'type': 'string', 'default': '_time'},
             'bucket': {'type': 'string'},
             'organization': {'type': 'string'},
             'token': {'type': 'string'},
@@ -2056,9 +2065,9 @@ class Influx_Store_Factory(Store_Factory_Mixin):
             token=params['token'],
             org=params['organization']
             )
-        client = Influx_Store_Client(influxclient, params['bucket'], params['measurement'])
+        client = Influx_Store_Client(influxclient, params['index'], params['bucket'], params['measurement'])
         decorators = []
-        return self.create(client, UnitTransformer(), decorators=decorators)
+        return self.create(client, Transformer(), decorators=decorators)
 
 
 
