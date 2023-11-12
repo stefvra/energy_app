@@ -55,7 +55,7 @@ class Control_Strategy(basic.Strategy):
         # read inputs
         self.states['power7'] = await inputs[0].get_async()
 
-        now = self.now_localized()
+        now = datetime.datetime.utcnow()
         ma_filter_start_time = now - datetime.timedelta(seconds=self.config['moving_average_seconds'])
         df_dsmr = await inputs[1].get_async(ma_filter_start_time, now)
 

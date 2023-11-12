@@ -824,9 +824,10 @@ class Influx_Store_Client(Store_Client):
         """
 
         # issues with timezone patched with adding to time queries
+        # update: patch is removed. To be seen if this works.
         
-        start_corrected = start - datetime.timedelta(hours=1)
-        stop_corrected = stop - datetime.timedelta(hours=1)
+        start_corrected = start # - datetime.timedelta(hours=1)
+        stop_corrected = stop # - datetime.timedelta(hours=1)
         start_str = start_corrected.strftime("%Y-%m-%dT%H:%M:%SZ")
         stop_str = stop_corrected.astimezone().strftime("%Y-%m-%dT%H:%M:%SZ")
 
