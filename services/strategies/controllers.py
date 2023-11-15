@@ -83,11 +83,11 @@ class Control_Strategy(basic.Strategy):
         if enough_time_has_passed:
             if excess_power > self.config['upper_treshold_power']:
                 if self.states['charging'] == False:
-                    self.states['time_of_last_state_change'] = self.now_localized()
+                    self.states['time_of_last_state_change'] = now
                     self.states['charging'] = True
             elif excess_power < (self.config['upper_treshold_power'] - self.config['deadband_power']):
                 if self.states['charging'] == True:
-                    self.states['time_of_last_state_change'] = self.now_localized()
+                    self.states['time_of_last_state_change'] = now
                     self.states['charging'] = False
 
 
